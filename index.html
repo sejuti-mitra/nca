@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ceccoli Tarot — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --terracotta: #b8593d;
+    --terracotta-deep: #a34d34;
+    --terracotta-shadow: #8f4229;
+    --cream: #f4e9d2;
+    --cream-dim: #f4e9d2cc;
+    --card-back: #ddbba0;
+    --card-back-shadow: #c99b7c;
+    --ink: #8a3d2a;
+    --ink-soft: #b5573d;
+    --divider: rgba(244,233,210,0.32);
+    --tile-bg: rgba(244,233,210,0.06);
+    --tile-border: rgba(244,233,210,0.22);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:#2a1712;
+    font-family:'Cormorant Garamond', serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    min-height:100dvh;
+    color:var(--cream);
+  }
+  .phone{
+    width:390px;
+    height:844px;
+    max-width:100vw;
+    max-height:96vh;
+    max-height:96dvh;
+    background:var(--terracotta);
+    border-radius:38px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 0 10px #1c0f0b, 0 0 0 12px #3a2018;
+    position:relative;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+  /* On an actual phone, ditch the mock device frame and go edge-to-edge */
+  @media (max-width: 430px){
+    body{ padding:0; }
+    .phone{
+      width:100vw;
+      height:100vh;
+      height:100dvh;
+      max-width:100vw;
+      max-height:100vh;
+      max-height:100dvh;
+      border-radius:0;
+      box-shadow:none;
+    }
+  }
+  .screen{
+    position:absolute;
+    inset:0;
+    display:none;
+    flex-direction:column;
+    padding: 56px 28px 28px;
+    overflow-y:auto;
+    animation: fadeIn .35s ease;
+  }
+  .screen::-webkit-scrollbar{display:none;}
+  .screen.active{display:flex;}
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  h1,h2,h3{ margin:0; font-family:'Fraunces', serif; color:var(--cream); font-weight:700; }
+  .eyebrow{ font-family:'Fraunces', serif; font-weight:500; font-style:italic; font-size:16px; letter-spacing:0.02em; color:var(--cream-dim); text-align:center; }
+  .brandmark{ font-size:44px; line-height:1.02; text-align:center; letter-spacing:0.03em; font-weight:900; margin-top:10px; }
+
+  /* ---------- SPLASH ---------- */
+  #screen-splash{ justify-content:center; align-items:center; text-align:center; }
+  #screen-splash .footer-credit{ position:absolute; bottom:34px; left:0; right:0; text-align:center; font-size:13px; letter-spacing:0.03em; color:var(--cream-dim); font-family:'Fraunces',serif; }
+
+  /* ---------- HOME ---------- */
+  #screen-home{ padding-top:64px; }
+  .home-header{ text-align:center; margin-bottom:28px; }
+  .tile-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:14px;
+    margin-top:6px;
+  }
+  .tile{
+    background:var(--tile-bg);
+    border:1px solid var(--tile-border);
+    border-radius:18px;
+    padding:22px 14px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition: transform .15s ease, background .15s ease;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-end;
+    min-height:180px;
+  }
+  .tile:active{ transform: scale(0.97); background: rgba(244,233,210,0.13); }
+  .tile.disabled{ opacity:0.45; cursor:default; }
+  .tile.disabled:active{ transform:none; }
+  .tile-icon{ width:56px; height:56px; margin-bottom:14px; color: var(--cream); display:block; }
+  .tile-label{ font-family:'Fraunces', serif; font-weight:600; font-size:21px; line-height:1.15; color:var(--cream); }
+  .about-link{
+    text-align:center; margin-top:auto; padding-top:24px;
+    font-family:'Fraunces', serif; font-size:16px; color:var(--cream-dim);
+    cursor:pointer; text-decoration: underline; text-underline-offset:4px;
+  }
+
+  /* ---------- PERSISTENT BACK BUTTON ---------- */
+  .persistent-back{
+    position:absolute; top:20px; left:20px; z-index:40;
+    width:38px; height:38px; border-radius:50%;
+    background:rgba(244,233,210,0.08); border:1px solid var(--tile-border);
+    display:none; align-items:center; justify-content:center;
+    cursor:pointer; transition: background .15s ease, transform .15s ease;
+  }
+  .persistent-back.show{ display:flex; }
+  .persistent-back:active{ transform:scale(0.92); background:rgba(244,233,210,0.18); }
+  .persistent-back svg{ width:16px; height:16px; }
+
+  /* ---------- READINGS LIST ---------- */
+  #screen-readings h2{ font-size:30px; text-align:center; margin-bottom:22px; }
+  .spread-list{ display:flex; flex-direction:column; gap:14px; }
+  .spread-card{
+    background:var(--tile-bg);
+    border:1px solid var(--tile-border);
+    border-radius:18px;
+    padding:18px;
+    display:flex;
+    align-items:center;
+    gap:18px;
+    cursor:pointer;
+    transition: transform .15s ease, background .15s ease;
+  }
+  .spread-card:active{ transform: scale(0.98); background: rgba(244,233,210,0.13); }
+  .spread-swatch{ display:flex; gap:6px; flex-shrink:0; width:64px; justify-content:center; }
+  .mini-card{
+    width:34px; height:52px; border-radius:6px; background:var(--card-back);
+    border:1px solid rgba(139,61,42,0.25);
+  }
+  .mini-card.offset{ margin-left:-18px; margin-top:8px; }
+  .mini-card.offset2{ margin-left:-18px; margin-top:-4px; }
+  .spread-title{ font-family:'Fraunces',serif; font-weight:600; font-size:20px; color:var(--cream); line-height:1.2; }
+
+  /* ---------- SPREAD INFO ---------- */
+  #screen-spread-info h2{ font-size:27px; text-align:center; margin-bottom:22px; }
+  .spread-copy{ font-size:19px; line-height:1.55; color:var(--cream); text-align:center; font-family:'Cormorant Garamond', serif; }
+  .spread-copy p{ margin:0 0 18px; }
+  .primary-btn{
+    margin-top:auto;
+    background:transparent;
+    border:1.5px solid var(--tile-border);
+    color:var(--cream);
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:21px;
+    padding:18px;
+    border-radius:16px;
+    cursor:pointer;
+    text-align:center;
+  }
+  .primary-btn:active{ background:rgba(244,233,210,0.12); }
+
+  /* ---------- DRAW SCREEN ---------- */
+  #screen-drawcard{
+    justify-content:flex-start; align-items:center; text-align:center;
+    padding: 64px 28px 36px;
+  }
+  .draw-header{ flex-shrink:0; width:100%; }
+  .draw-title{
+    font-family:'Fraunces', serif; font-weight:500; font-style:italic;
+    font-size:29px; line-height:1.2; color:var(--cream); letter-spacing:0.01em;
+  }
+  .draw-body{
+    flex:1; width:100%;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .draw-footer{ flex-shrink:0; width:100%; padding-top:18px; }
+  .draw-sub{ color:var(--cream-dim); font-family:'Fraunces',serif; font-style:italic; font-size:16px; }
+  .draw-row{ display:flex; gap:14px; justify-content:center; align-items:flex-end; flex-wrap:wrap; }
+  .draw-slot{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .draw-slot-label{ font-family:'Fraunces',serif; font-size:13px; color:var(--cream-dim); letter-spacing:0.04em; text-transform:uppercase; }
+  .flip-card{
+    width:210px; height:334px;
+    perspective: 1200px;
+    cursor:pointer;
+  }
+  .flip-card.small{ width:104px; height:166px; }
+  .flip-card.small.count-3{ width:92px; height:146px; }
+  .flip-inner{
+    width:100%; height:100%; position:relative;
+    transform-style:preserve-3d;
+    transition: transform .6s cubic-bezier(.4,.2,.2,1);
+  }
+  .flip-card.revealed .flip-inner{ transform: rotateY(180deg); }
+  .flip-face{
+    position:absolute; inset:0;
+    backface-visibility:hidden;
+    border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+  }
+  .flip-back{
+    background: repeating-linear-gradient(135deg, var(--card-back), var(--card-back) 10px, var(--card-back-shadow) 10px, var(--card-back-shadow) 20px);
+    border:2px solid rgba(139,61,42,0.3);
+  }
+  .flip-back-mark{ width:34%; opacity:0.8; }
+  .flip-front{
+    background:var(--cream);
+    transform: rotateY(180deg);
+    border:1px solid rgba(139,61,42,0.14);
+    align-items:stretch; justify-content:stretch;
+  }
+  .card-face{ width:100%; height:100%; display:flex; flex-direction:column; }
+  .card-image-area{
+    flex:1; margin:8px 8px 0; border-radius:5px 5px 0 0;
+    background:var(--card-back);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .card-image-area .suit-icon{ font-size:22px; color:var(--ink-soft); margin-bottom:6px; }
+  .card-image-area .placeholder-label{ font-family:'Fraunces',serif; font-size:11px; letter-spacing:0.03em; color:var(--ink-soft); text-align:center; }
+  .card-image-area img, .thumb-image-area img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .flip-back img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .card-name-label{ flex-shrink:0; font-family:'Fraunces',serif; font-weight:700; font-size:13px; line-height:1.2; color:var(--ink); text-align:center; padding:6px 8px 8px; }
+  .flip-card.small .card-image-area{ margin:5px 5px 0; border-radius:7px 7px 0 0; }
+  .flip-card.small .card-image-area .suit-icon{ font-size:16px; margin-bottom:3px; }
+  .flip-card.small .card-image-area .placeholder-label{ font-size:9px; }
+  .flip-card.small .card-name-label{ font-size:9.5px; padding:4px 4px 6px; }
+  .flip-card.small.count-3 .card-name-label{ font-size:8.8px; padding:3px 3px 5px; }
+
+
+
+  /* ---------- CARD DETAIL (full view, flip to meaning) ---------- */
+  #screen-card{ justify-content:flex-start; align-items:center; text-align:center; padding-top:96px; }
+  .detail-nav-row{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%; }
+  .detail-bottom-nav{ display:flex; align-items:center; justify-content:center; width:100%; margin-top:26px; }
+  .detail-bottom-nav.explore-mode{ justify-content:space-between; }
+  .detail-nav-circle{
+    display:none; flex-shrink:0; width:50px; height:50px; border-radius:50%;
+    background:rgba(244,233,210,0.08); border:1px solid var(--tile-border); color:var(--cream);
+    align-items:center; justify-content:center;
+    cursor:pointer; padding:0;
+  }
+  .detail-bottom-nav.explore-mode .detail-nav-circle{ display:flex; }
+  .detail-nav-circle:active{ background:rgba(244,233,210,0.18); transform:scale(0.93); }
+  .detail-nav-circle svg{ width:20px; height:20px; }
+  .detail-flip{ width: 260px; max-width:100%; aspect-ratio: 260/420; height: auto; perspective: 1600px; cursor:pointer; }
+  .detail-inner{ width:100%; height:100%; position:relative; transform-style:preserve-3d; transition: transform .55s cubic-bezier(.4,.2,.2,1); }
+  .detail-flip.flipped .detail-inner{ transform: rotateY(180deg); }
+  .detail-face{ position:absolute; inset:0; backface-visibility:hidden; border-radius:16px; overflow:hidden; }
+  .detail-front{
+    background:var(--cream);
+    border:1px solid rgba(139,61,42,0.14);
+    box-shadow: 0 16px 34px rgba(0,0,0,0.32);
+    display:flex; flex-direction:column;
+  }
+  .detail-front .card-image-area{ flex:1; margin:12px 12px 0; border-radius:4px 4px 0 0; background:var(--card-back); display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; }
+  .detail-front .card-image-area .suit-icon{ font-size:30px; color:var(--ink-soft); margin-bottom:10px; }
+  .detail-front .card-image-area .placeholder-label{ font-family:'Fraunces',serif; font-size:13px; color:var(--ink-soft); }
+  .detail-front .card-name-label{ font-size:16px; padding:8px 14px 12px; }
+  .detail-back{
+    background: var(--cream);
+    transform: rotateY(180deg);
+    border:3px solid rgba(139,61,42,0.15);
+    box-shadow: 0 16px 34px rgba(0,0,0,0.32);
+    display:flex; flex-direction:column;
+    align-items:center;
+    padding: 28px 26px 24px;
+    text-align:center;
+  }
+  .card-deco{ flex-shrink:0; display:flex; justify-content:center; align-items:center; color:var(--ink-soft); }
+  .card-deco svg{ width:52%; height:auto; display:block; }
+  .detail-back-content{
+    flex:1; width:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:12px 2px;
+  }
+  .card-name-big{ font-family:'Fraunces',serif; font-weight:700; font-size:25px; color:var(--ink); margin-bottom:14px; line-height:1.15; }
+  .card-keywords{ font-family:'Fraunces',serif; font-weight:600; font-size:15.5px; color:var(--ink); line-height:1.35; margin-bottom:16px; padding:0 8px; }
+  .keywords-divider{ width:60%; height:1px; background:rgba(138,61,42,0.25); margin:0 auto 18px; }
+  .card-meaning{ font-family:'Cormorant Garamond', serif; font-style:italic; font-size:16.5px; line-height:1.55; color:var(--ink); padding:0 4px; }
+  .detail-hint{ font-family:'Fraunces',serif; font-style:italic; font-size:14px; color:var(--cream-dim); }
+  .detail-actions{ margin-top:22px; display:flex; gap:12px; width:100%; }
+  .ghost-btn{
+    flex:1; background:transparent; border:1.5px solid var(--tile-border); color:var(--cream);
+    font-family:'Fraunces',serif; font-weight:600; font-size:16px; padding:14px; border-radius:12px; cursor:pointer;
+  }
+  .ghost-btn:active{ background:rgba(244,233,210,0.12); }
+
+  /* ---------- EXPLORE ---------- */
+  #screen-explore h2{ font-size:28px; text-align:center; margin-bottom:16px; }
+  .arcana-tabs{ display:flex; flex-shrink:0; gap:8px; margin-bottom:14px; background:rgba(244,233,210,0.06); border:1px solid var(--tile-border); border-radius:14px; padding:4px; }
+  .arcana-tab{
+    flex:1; text-align:center; padding:10px 8px; border-radius:11px; cursor:pointer;
+    font-family:'Fraunces',serif; font-weight:600; font-size:14.5px; color:var(--cream-dim);
+    transition: background .15s ease, color .15s ease;
+  }
+  .arcana-tab.active{ background:var(--cream); color:var(--ink); }
+  .filter-row{ display:flex; flex-shrink:0; gap:6px; overflow-x:auto; padding-bottom:10px; margin-bottom:14px; }
+  .filter-row::-webkit-scrollbar{ display:none; }
+  .filter-chip{
+    flex-shrink:0; padding:7px 11px; border-radius:999px; border:1px solid var(--tile-border);
+    font-family:'Fraunces',serif; font-size:12.5px; color:var(--cream-dim); cursor:pointer; white-space:nowrap;
+  }
+  .filter-chip.active{ background:var(--cream); color:var(--ink); border-color:var(--cream); font-weight:600; }
+  .explore-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap:12px;
+    padding-bottom:20px;
+  }
+  .explore-thumb{
+    aspect-ratio: 5/8;
+    background:var(--cream);
+    border-radius:10px;
+    border:1px solid rgba(139,61,42,0.14);
+    cursor:pointer;
+    display:flex; flex-direction:column;
+    padding:5px 5px 6px;
+    transition: transform .12s ease;
+  }
+  .explore-thumb:active{ transform: scale(0.94); }
+  .explore-thumb .thumb-image-area{ flex:1; background:var(--card-back); border-radius:5px 5px 0 0; display:flex; align-items:center; justify-content:center; margin-bottom:4px; }
+  .explore-thumb .suit-icon{ font-size:15px; color:var(--ink-soft); }
+  .explore-thumb .thumb-name{ font-family:'Fraunces',serif; font-size:9px; font-weight:700; color:var(--ink); text-align:center; line-height:1.2; }
+
+  /* ---------- ABOUT ---------- */
+  #screen-about{ justify-content:center; text-align:center; }
+  #screen-about p{ font-size:18px; line-height:1.6; color:var(--cream); }
+
+  /* toast */
+  .toast{
+    position:absolute; bottom:26px; left:50%; transform: translateX(-50%) translateY(20px);
+    background:var(--cream); color:var(--ink); font-family:'Fraunces',serif; font-weight:600;
+    padding:12px 20px; border-radius:12px; font-size:14px; opacity:0; transition: all .25s ease; pointer-events:none;
+    white-space:nowrap; box-shadow:0 8px 20px rgba(0,0,0,0.25);
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+
+  ::-webkit-scrollbar{ width:0; }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+
+  <div class="persistent-back" id="persistent-back">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cream);"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
+  </div>
+
+  <!-- SPLASH -->
+  <div class="screen active" id="screen-splash">
+    <div class="eyebrow">Nicoletta Ceccoli</div>
+    <div class="brandmark">CECCOLI<br>TAROT</div>
+    <div class="footer-credit">© 2024 App Designed &amp; Developed by Sejuti Mitra</div>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen" id="screen-home">
+    <div class="home-header">
+      <div class="eyebrow">Nicoletta Ceccoli</div>
+      <div class="brandmark" style="font-size:38px;">CECCOLI<br>TAROT</div>
+    </div>
+    <div class="tile-grid">
+      <div class="tile" data-nav="today">
+        <svg class="tile-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.33325 20C3.33325 13.7146 3.33325 10.5719 5.28587 8.61924C7.2385 6.66663 10.3812 6.66663 16.6666 6.66663H23.3333C29.6186 6.66663 32.7614 6.66663 34.7139 8.61924C36.6666 10.5719 36.6666 13.7146 36.6666 20V23.3333C36.6666 29.6186 36.6666 32.7615 34.7139 34.714C32.7614 36.6666 29.6186 36.6666 23.3333 36.6666H16.6666C10.3812 36.6666 7.2385 36.6666 5.28587 34.714C3.33325 32.7615 3.33325 29.6186 3.33325 23.3333V20Z" fill="#FAF3E0" stroke="#FAF3E0" stroke-width="1.1648"/><path d="M11.6667 6.66663V4.16663" stroke="#FAF3E0" stroke-width="2" stroke-linecap="round"/><path d="M28.3333 6.66663V4.16663" stroke="#FAF3E0" stroke-width="2" stroke-linecap="round"/><path d="M2.5 15L37.5 15" stroke="#B25F43" stroke-width="0.96" stroke-linecap="round"/><path d="M30.0001 28.3333C30.0001 29.2538 29.2539 30 28.3334 30C27.4129 30 26.6667 29.2538 26.6667 28.3333C26.6667 27.4128 27.4129 26.6666 28.3334 26.6666C29.2539 26.6666 30.0001 27.4128 30.0001 28.3333Z" fill="#B25F43"/><path d="M30.0001 21.6667C30.0001 22.5872 29.2539 23.3333 28.3334 23.3333C27.4129 23.3333 26.6667 22.5872 26.6667 21.6667C26.6667 20.7462 27.4129 20 28.3334 20C29.2539 20 30.0001 20.7462 30.0001 21.6667Z" fill="#B25F43"/><path d="M21.6666 28.3333C21.6666 29.2538 20.9204 30 19.9999 30C19.0794 30 18.3333 29.2538 18.3333 28.3333C18.3333 27.4128 19.0794 26.6666 19.9999 26.6666C20.9204 26.6666 21.6666 27.4128 21.6666 28.3333Z" fill="#B25F43"/><path d="M21.6666 21.6667C21.6666 22.5872 20.9204 23.3333 19.9999 23.3333C19.0794 23.3333 18.3333 22.5872 18.3333 21.6667C18.3333 20.7462 19.0794 20 19.9999 20C20.9204 20 21.6666 20.7462 21.6666 21.6667Z" fill="#B25F43"/><path d="M13.3333 28.3333C13.3333 29.2538 12.5871 30 11.6667 30C10.7462 30 10 29.2538 10 28.3333C10 27.4128 10.7462 26.6666 11.6667 26.6666C12.5871 26.6666 13.3333 27.4128 13.3333 28.3333Z" fill="#B25F43"/><path d="M13.3333 21.6667C13.3333 22.5872 12.5871 23.3333 11.6667 23.3333C10.7462 23.3333 10 22.5872 10 21.6667C10 20.7462 10.7462 20 11.6667 20C12.5871 20 13.3333 20.7462 13.3333 21.6667Z" fill="#B25F43"/></svg>
+        <div class="tile-label">Today's<br>Card</div>
+      </div>
+      <div class="tile" data-nav="readings">
+        <svg class="tile-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M27.1643 28.6121V7.25748L32.7744 8.88622C34.2587 9.42914 35.6335 11.2667 34.9461 13.2295L29.5169 32.7798C28.974 34.4085 27.8882 34.9461 26.8024 34.9461L24.6307 32.9554C27.3453 32.7744 27.1643 30.4377 27.1643 28.6121Z" fill="#FAF3E0"/><path d="M8.34331 5.08583C6.89563 5.08583 5.08583 6.8955 5.08583 8.34331V28.6121C5.08583 29.6979 6.17165 31.6886 8.34331 31.6886H23.5449C25.7165 31.6886 26.2595 31.1457 26.2595 28.974V8.34331C26.2595 6.53364 24.6307 5.08583 22.821 5.08583H8.34331Z" fill="#FAF3E0"/><path d="M16.1614 13.4588C15.8718 13.0728 15.2927 13.0728 15.0031 13.4588L11.5647 18.0434C11.3717 18.3008 11.3717 18.6547 11.5647 18.9121L15.0031 23.4967C15.2927 23.8827 15.8718 23.8827 16.1614 23.4967L19.5998 18.9121C19.7928 18.6547 19.7928 18.3008 19.5998 18.0434L16.1614 13.4588Z" fill="#B25F43"/><path fill-rule="evenodd" clip-rule="evenodd" d="M8.34331 4C5.94457 4 4 5.94457 4 8.34331V28.6121C4 31.0109 5.94457 32.9554 8.34331 32.9554H14.4218L25.2281 35.8509C27.5451 36.4717 29.9267 35.0968 30.5475 32.7798L35.7935 13.2016C36.4143 10.8846 35.0393 8.50301 32.7223 7.88217L26.6269 6.24892C25.8875 4.90822 24.4603 4 22.821 4H8.34331ZM27.1643 7.25748V28.6121C27.1643 30.4377 27.3453 32.7744 24.6307 32.9554H18.6587L26.8024 34.9461C27.8882 34.9461 28.974 34.4085 29.5169 32.7798L34.9461 13.2295C35.6335 11.2667 34.2587 9.42914 32.7744 8.88622L27.1643 7.25748ZM5.08583 8.34331C5.08583 6.8955 6.89563 5.08583 8.34331 5.08583H22.821C24.6307 5.08583 26.2595 6.53364 26.2595 8.34331V28.974C26.2595 31.1457 25.7165 31.6886 23.5449 31.6886H8.34331C6.17165 31.6886 5.08583 29.6979 5.08583 28.6121V8.34331Z" fill="#B25F43"/><path d="M26.8024 34.9461L24.6307 32.9554H18.6587L26.8024 34.9461Z" fill="#FAF3E0"/></svg>
+        <div class="tile-label">Card<br>Reading</div>
+      </div>
+      <div class="tile disabled" data-nav="journal-toast">
+        <svg class="tile-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="2.5" width="27.5" height="33.75" rx="2.88" fill="#FAF3E0"/><path d="M11.9787 33.524C11.8825 33.5241 11.7873 33.5051 11.6985 33.4682C11.6097 33.4313 11.5291 33.3772 11.4613 33.309C11.3689 33.2148 11.3038 33.0972 11.273 32.9689C11.2422 32.8406 11.2469 32.7063 11.2865 32.5804L14.201 23.8366C14.2366 23.7297 14.2964 23.6324 14.3759 23.5525C28.7375 9.03787 29.0035 8.89578 29.1383 8.82656C29.2753 8.7583 29.4303 8.73494 29.5814 8.75979C29.7325 8.78464 29.8719 8.85644 29.9798 8.96501L35.809 14.7942C35.9447 14.9307 36.0209 15.1154 36.0209 15.3079C36.0209 15.5004 35.9447 15.685 35.809 15.8216L21.2361 30.3945C21.1566 30.4753 21.0593 30.5364 20.9519 30.573L12.2082 33.4875C12.1341 33.5119 12.0566 33.5242 11.9787 33.524ZM15.5308 24.4451L13.1299 31.6441L20.3289 29.2432L34.2643 15.3079L29.4443 10.4879C27.5498 12.3277 20.4419 19.4794 15.5308 24.4451Z" fill="#B25F43"/><path d="M17.8078 27.6948C17.6149 27.6939 17.4301 27.6166 17.2941 27.4798L14.3795 24.5652C14.2602 24.4258 14.1978 24.2465 14.2049 24.0632C14.2119 23.8798 14.288 23.7058 14.4177 23.5761C14.5475 23.4463 14.7215 23.3703 14.9048 23.3632C15.0882 23.3561 15.2675 23.4185 15.4069 23.5378L18.3215 26.4524C18.4228 26.5543 18.4917 26.6839 18.5196 26.8248C18.5474 26.9658 18.533 27.1118 18.4781 27.2445C18.4232 27.3773 18.3303 27.4909 18.211 27.571C18.0918 27.6511 17.9515 27.6942 17.8078 27.6948ZM30.9234 20.4083C30.7305 20.4075 30.5457 20.3302 30.4097 20.1934L24.5478 14.3351C24.4801 14.2674 24.4264 14.187 24.3897 14.0985C24.3531 14.0101 24.3342 13.9153 24.3342 13.8195C24.3342 13.7238 24.3531 13.629 24.3897 13.5406C24.4264 13.4521 24.4801 13.3717 24.5478 13.304C24.6845 13.1673 24.8699 13.0905 25.0633 13.0905C25.159 13.0905 25.2538 13.1094 25.3423 13.146C25.4307 13.1826 25.5111 13.2363 25.5788 13.304L31.4371 19.166C31.5384 19.2679 31.6073 19.3974 31.6352 19.5384C31.663 19.6793 31.6486 19.8253 31.5937 19.9581C31.5388 20.0909 31.4459 20.2044 31.3266 20.2845C31.2074 20.3647 31.0671 20.4077 30.9234 20.4083ZM23.637 10.2073H11.9786C11.7854 10.2073 11.6001 10.1305 11.4634 9.99387C11.3268 9.85723 11.25 9.67189 11.25 9.47864C11.25 9.2854 11.3268 9.10006 11.4634 8.96342C11.6001 8.82677 11.7854 8.75 11.9786 8.75H23.637C23.8302 8.75 24.0155 8.82677 24.1522 8.96342C24.2888 9.10006 24.3656 9.2854 24.3656 9.47864C24.3656 9.67189 24.2888 9.85723 24.1522 9.99387C24.0155 10.1305 23.8302 10.2073 23.637 10.2073ZM19.2651 14.5792H11.9786C11.7854 14.5792 11.6001 14.5024 11.4634 14.3657C11.3268 14.2291 11.25 14.0438 11.25 13.8505C11.25 13.6573 11.3268 13.4719 11.4634 13.3353C11.6001 13.1986 11.7854 13.1219 11.9786 13.1219H19.2651C19.4583 13.1219 19.6437 13.1986 19.7803 13.3353C19.917 13.4719 19.9937 13.6573 19.9937 13.8505C19.9937 14.0438 19.917 14.2291 19.7803 14.3657C19.6437 14.5024 19.4583 14.5792 19.2651 14.5792ZM14.8932 18.951H11.9786C11.7854 18.951 11.6001 18.8743 11.4634 18.7376C11.3268 18.601 11.25 18.4156 11.25 18.2224C11.25 18.0291 11.3268 17.8438 11.4634 17.7072C11.6001 17.5705 11.7854 17.4937 11.9786 17.4937H14.8932C15.0865 17.4937 15.2718 17.5705 15.4085 17.7072C15.5451 17.8438 15.6219 18.0291 15.6219 18.2224C15.6219 18.4156 15.5451 18.601 15.4085 18.7376C15.2718 18.8743 15.0865 18.951 14.8932 18.951Z" fill="#B25F43"/></svg>
+        <div class="tile-label">Journal<br>Entries</div>
+      </div>
+      <div class="tile" data-nav="explore">
+        <svg class="tile-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19.9999 13.9371V14.0634C19.9981 14.0657 19.9963 14.0679 19.9945 14.0702L19.946 36.1946C19.0687 35.1414 17.99 36.8433 17 36C15.422 34.6556 13.6814 34.2106 12 33.4C9.36514 32.1279 6.74221 31.5112 4.56616 31.5499L4.79995 6.00165C9.03381 5.92789 14.9611 8.33381 19.3781 13.2186C19.5705 13.4315 19.7609 13.6498 19.946 13.8725C19.9651 13.8938 19.9826 13.9151 19.9999 13.9371Z" fill="#FAF3E0" stroke="#FAF3E0" stroke-width="0.96" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.018 32.4662C9.98986 31.2345 6.94885 30.4842 4.01064 30.2152V7.76564L0.600098 7.15955V33.4249L13.018 35.6337L17.3937 36.4117L19.8895 36.8557V36.1896C19.8878 36.192 19.8862 36.1937 19.8846 36.1961V36.1313C19.0613 35.581 18.2307 35.0681 17.3937 34.5933L13.018 32.4662Z" fill="#FAF3E0" stroke="#B25F43" stroke-width="0.96" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.44082 5.63135V27.5988C8.68965 27.543 14.0286 28.5482 17.3937 33.0156C18.2696 33.9142 19.1083 34.9255 19.8846 36.0478V36.1313C19.0613 35.581 18.2307 35.0681 17.3937 34.5933C10.9886 31.068 5.80294 30.2057 4.01074 30.2153V5.30237C4.81379 5.37526 5.62488 5.48549 6.44082 5.63135ZM4.01074 5.30237L6.44082 5.63135Z" stroke="#B25F43" stroke-width="0.96" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.8895 11.2581V11.3927C19.8879 11.3951 19.8863 11.3975 19.8847 11.3999V36.0478C19.1084 34.9255 18.2697 33.9143 17.3938 33.0156C15.9976 31.583 14.5058 30.434 13.0182 29.5702C10.6869 28.2146 8.36623 27.5574 6.44092 27.5988V2.8018C10.1869 2.72321 15.4312 5.28704 19.3394 10.4924C19.5095 10.7193 19.678 10.9519 19.8418 11.1893C19.8587 11.212 19.8741 11.2347 19.8895 11.2581Z" fill="#FAF3E0" stroke="#B25F43" stroke-width="0.96" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M39.2718 7.1593V33.4252L19.9827 36.8556V36.1894C19.9838 36.1917 19.9862 36.1941 19.9874 36.1964V36.1309C25.1746 32.6631 30.6786 30.6901 35.8612 30.2156V7.76586L39.2718 7.1593Z" fill="#FAF3E0" stroke="#B25F43" stroke-width="0.96" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M35.8611 5.302V30.2155C30.6786 30.69 25.1746 32.663 19.9873 36.1309V36.0479C23.9403 30.3312 29.5074 27.5155 33.4311 27.5985V5.63161C34.247 5.48552 35.0582 5.3756 35.8611 5.302Z" fill="#FAF3E0" stroke="#B25F43" stroke-width="0.96" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M33.4312 2.80179V27.5984C29.5074 27.5154 23.9403 30.331 19.9874 36.0478V11.3997C19.9862 11.3973 19.9838 11.395 19.9827 11.3926V11.2582C19.9979 11.2348 20.0131 11.2115 20.0306 11.1892C20.1954 10.9519 20.3625 10.7193 20.5343 10.4926C24.4417 5.28679 29.6852 2.72351 33.4312 2.80179Z" fill="#FAF3E0" stroke="#B25F43" stroke-width="0.96" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="tile-label">Explore<br>Cards</div>
+      </div>
+    </div>
+    <div class="about-link" data-nav="about">About</div>
+  </div>
+
+  <!-- READINGS LIST -->
+  <div class="screen" id="screen-readings">
+    <h2>Choose a Spread</h2>
+    <div class="spread-list">
+      <div class="spread-card" data-spread="single">
+        <div class="spread-swatch"><div class="mini-card"></div></div>
+        <div class="spread-title">Single Card<br>Reading</div>
+      </div>
+      <div class="spread-card" data-spread="yesno">
+        <div class="spread-swatch"><div class="mini-card"></div></div>
+        <div class="spread-title">Yes/No<br>Reading</div>
+      </div>
+      <div class="spread-card" data-spread="bittersweet">
+        <div class="spread-swatch"><div class="mini-card"></div><div class="mini-card offset"></div></div>
+        <div class="spread-title">Bittersweet<br>Reading</div>
+      </div>
+      <div class="spread-card" data-spread="timeline">
+        <div class="spread-swatch"><div class="mini-card"></div><div class="mini-card offset2"></div><div class="mini-card offset"></div></div>
+        <div class="spread-title">Timeline<br>Reading</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPREAD INFO -->
+  <div class="screen" id="screen-spread-info">
+    <h2 id="spread-info-title">Single Card Reading</h2>
+    <div class="spread-copy" id="spread-info-copy"></div>
+    <button class="primary-btn" id="btn-start-draw">Draw a Card</button>
+  </div>
+
+  <!-- DRAW SCREEN -->
+  <div class="screen" id="screen-drawcard">
+    <div class="draw-header">
+      <div class="draw-title" id="draw-title">Your Card</div>
+    </div>
+    <div class="draw-body">
+      <div class="draw-row" id="draw-row"></div>
+    </div>
+    <div class="draw-footer">
+      <div class="draw-sub" id="draw-sub">Tap the card to reveal it</div>
+    </div>
+  </div>
+
+  <!-- CARD DETAIL -->
+  <div class="screen" id="screen-card">
+    <div class="detail-nav-row" id="detail-nav-row">
+      <div class="detail-flip" id="detail-flip">
+        <div class="detail-inner">
+          <div class="detail-face detail-front">
+            <div class="card-face">
+              <div class="card-image-area">
+                <img id="detail-card-image" src="" alt="">
+              </div>
+              <div class="card-name-label" id="detail-front-name">Five of Cups</div>
+            </div>
+          </div>
+          <div class="detail-face detail-back">
+            <div class="card-deco card-deco-top"><svg width="124" height="31" viewBox="0 0 124 31" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M0.180432 17.1769C1.07449 12.0745 5.85725 8.67441 10.8658 9.57717C11.3432 9.66447 11.6609 10.1281 11.5722 10.6129C11.4901 11.0996 11.0262 11.4065 10.5591 11.3351C6.51648 10.5884 2.62389 13.3562 1.89674 17.4957C1.44001 20.1027 2.04035 22.8295 3.54511 24.9889C4.46634 26.3037 5.68064 27.2937 7.04825 27.967C3.94039 25.3625 3.43579 20.6715 5.94653 17.4454C8.03482 14.7669 11.8627 14.3198 14.4789 16.4567C15.5295 17.3125 16.1946 18.5399 16.3447 19.9004C16.4947 21.2641 16.1163 22.6106 15.2772 23.6847C14.5779 24.5841 13.5855 25.1536 12.4624 25.2819C11.3439 25.4108 10.2486 25.0907 9.37203 24.3718C9.16371 24.2045 9.07509 23.9677 9.06474 23.7125C8.91465 23.4373 8.80208 23.1377 8.80208 22.7951C8.80208 21.7456 9.6308 20.8871 10.6685 20.8871C11.6952 20.8871 12.5278 21.7423 12.5278 22.7951C12.5278 23.0326 12.4728 23.2521 12.3945 23.4651C12.9916 23.3639 13.5273 23.0676 13.9057 22.5723C14.4556 21.8745 14.704 20.9989 14.6018 20.1061C14.4964 19.2126 14.0733 18.4143 13.3804 17.8568C11.514 16.3343 8.79173 16.6571 7.29797 18.5545C5.36688 21.0412 5.77315 24.6648 8.20173 26.6456C11.3161 29.1813 14.9667 28.7309 18.4737 25.3692C18.6238 25.2296 18.8179 25.184 19.0022 25.1661C20.6875 23.4962 22.4206 21.323 24.4507 18.7139C25.3616 17.5453 26.2382 16.2834 27.1186 15.0275C26.8114 15.083 26.5112 15.1511 26.2006 15.1511C25.2658 15.1511 24.3245 14.8912 23.4066 14.3634C21.0763 13.0242 20.2444 9.98457 21.5544 7.59243C22.6464 5.59908 25.1332 4.88019 27.0915 6.00582C27.893 6.46216 28.4669 7.21413 28.712 8.11755C28.9579 9.02097 28.8421 9.96738 28.3918 10.7822C27.6103 12.2101 25.8261 12.7213 24.4242 11.9177C24.0865 11.724 23.9869 11.3423 24.0593 10.9779C24.0386 10.9131 23.981 10.8853 23.9668 10.8212C23.8814 10.1777 24.3077 9.58842 24.9359 9.49252C25.5427 9.39993 26.0991 9.82916 26.2084 10.4429C26.4775 10.3543 26.7201 10.1777 26.8696 9.90785C27.0882 9.50839 27.1497 9.0428 27.03 8.59968C26.9077 8.15657 26.6276 7.78819 26.2349 7.56399C25.1093 6.92908 23.6964 7.33185 23.076 8.46542C22.2363 9.99978 22.7687 11.9462 24.2631 12.804C26.7706 14.2504 28.7114 12.597 29.7458 11.3185C34.0576 5.36364 38.9872 0 47.5947 0C47.6154 0 47.6393 0 47.6626 0C51.9168 0.0138886 55.7648 1.75261 58.5162 4.89672C60.2286 6.85303 61.3601 9.28419 61.9928 11.9105C62.6171 9.28022 63.7531 6.85369 65.4694 4.89672C68.2175 1.75261 72.0707 0.0138886 76.3229 0C76.343 0 76.3637 0 76.3896 0C84.9899 0 89.9201 5.35703 94.2339 11.3106C95.2677 12.589 97.2169 14.249 99.7244 12.8033C101.22 11.9422 101.751 9.99582 100.913 8.46476C100.287 7.32392 98.8698 6.91784 97.7545 7.55936C97.3637 7.78423 97.0843 8.15194 96.9613 8.59506C96.8404 9.03817 96.8947 9.50178 97.1147 9.90653C97.2667 10.1764 97.5106 10.349 97.7797 10.4383C97.8942 9.82452 98.4467 9.39927 99.0542 9.4912C99.6836 9.58709 100.11 10.1764 100.021 10.8199C100.011 10.888 99.9482 10.9158 99.9308 10.9766C99.9974 11.341 99.8997 11.7226 99.5639 11.9164C98.1633 12.72 96.3778 12.2087 95.5963 10.7809C95.1441 9.96341 95.0335 9.01634 95.2806 8.11292C95.5265 7.21347 96.1029 6.4615 96.8979 6.00119C98.8517 4.88415 101.338 5.59512 102.437 7.59177C103.747 9.9806 102.914 13.0202 100.581 14.3595C99.6616 14.8879 98.7184 15.1478 97.7868 15.1478C97.4776 15.1478 97.1742 15.0764 96.8708 15.0235C97.7506 16.284 98.624 17.5446 99.5368 18.7132C101.564 21.3183 103.298 23.4949 104.99 25.1655C105.178 25.1827 105.364 25.229 105.514 25.3685C109.025 28.7269 112.675 29.1766 115.788 26.641C118.216 24.6642 118.622 21.0399 116.689 18.5532C115.198 16.6438 112.469 16.3264 110.608 17.8521C109.919 18.4063 109.485 19.2086 109.388 20.0981C109.291 20.9876 109.535 21.8666 110.088 22.5643C110.465 23.0557 111.002 23.352 111.596 23.4572C111.519 23.2449 111.464 23.0253 111.464 22.7879C111.464 21.7376 112.299 20.8798 113.325 20.8798C114.355 20.8798 115.191 21.7343 115.191 22.7879C115.191 23.1258 115.079 23.4294 114.929 23.7052C114.918 23.9558 114.828 24.1966 114.621 24.3639C113.741 25.0828 112.641 25.4036 111.531 25.2706C110.415 25.1456 109.415 24.5769 108.721 23.6807C107.882 22.6067 107.502 21.2641 107.655 19.8931C107.805 18.5261 108.468 17.3012 109.521 16.452C112.138 14.3125 115.966 14.7589 118.058 17.4408C120.564 20.6603 120.061 25.3546 116.955 27.9597C118.324 27.2831 119.537 26.2957 120.459 24.9809C121.965 22.8223 122.565 20.0981 122.104 17.4877C121.378 13.3443 117.507 10.5805 113.444 11.3271C112.975 11.3986 112.514 11.0924 112.431 10.6049C112.347 10.1208 112.661 9.65654 113.137 9.56924C118.128 8.66251 122.925 12.0632 123.822 17.1689C124.364 20.2482 123.655 23.4711 121.877 26.0173C120.141 28.5007 117.587 30.1151 114.684 30.5721C107.431 31.6918 103.124 26.2025 98.1672 19.8164C98.14 19.7813 98.1142 19.7397 98.087 19.7046H98.0838C97.0144 18.4943 94.8342 16.7225 92.308 18.4421C90.8802 19.4116 90.4881 21.3931 91.4275 22.8434C92.1339 23.932 93.5766 24.2243 94.6414 23.5021C95.4139 22.9757 95.6241 21.9122 95.1137 21.1272C94.9209 20.8349 94.624 20.6808 94.307 20.6318C94.2009 21.2185 93.7066 21.6503 93.1199 21.6021C92.4865 21.5386 92.0214 20.9843 92.0777 20.3395C92.0848 20.2449 92.1682 20.1927 92.2006 20.1054C92.1838 19.7985 92.2601 19.495 92.5279 19.3137C93.8632 18.3997 95.6804 18.7734 96.5706 20.1332C97.6141 21.7376 97.1845 23.9175 95.6138 24.9849C94.9216 25.4518 94.1401 25.6754 93.367 25.6754C92.0505 25.6754 90.7573 25.0233 89.9745 23.8229C88.5008 21.5458 89.1115 18.4632 91.3408 16.9454C92.6508 16.0559 94.0586 15.7596 95.4417 16.0301C95.2573 15.7669 95.0678 15.5222 94.884 15.2596C94.1815 14.2484 93.4647 13.2451 92.7414 12.2478C92.7214 12.22 92.6942 12.1988 92.6715 12.1691C92.6683 12.1624 92.6715 12.1519 92.6651 12.1446C88.6476 6.6447 84.0576 1.77377 76.387 1.77377C76.3682 1.77377 76.3475 1.77377 76.3307 1.77377C72.5779 1.78435 69.1873 3.3121 66.7736 6.07262C64.0681 9.16978 62.7943 13.5447 63.2802 18.079C63.6314 21.3924 65.2248 24.3705 67.7679 26.4558C70.1234 28.3883 73.0216 29.2983 76.0124 29.1482C77.8115 28.8274 79.2587 27.9868 80.1845 26.6515C81.3017 25.0398 81.6685 22.7799 81.1872 20.4506C80.8754 18.9507 80.0117 17.6656 78.7515 16.8231C77.4906 15.9878 75.9911 15.702 74.518 16.0195C73.3859 16.2655 72.4148 16.9454 71.7854 17.9394C71.1578 18.9295 70.9444 20.108 71.185 21.2734C71.3636 22.145 71.8617 22.8917 72.5921 23.3805C73.3277 23.8751 74.2042 24.0431 75.0776 23.8507C75.6572 23.729 76.145 23.3732 76.5021 22.8924C75.6288 22.7244 74.9683 21.9711 74.9793 21.03C74.998 19.9797 75.839 19.1398 76.8728 19.1537C77.6492 19.161 78.309 19.6656 78.5788 20.3527C78.606 20.4162 78.6694 20.44 78.6829 20.5062C78.7153 20.653 78.6765 20.7992 78.6901 20.9526C78.6901 21.0015 78.7159 21.0326 78.7159 21.0849C78.7159 21.1239 78.6972 21.1517 78.6939 21.1794C78.7399 22.0723 78.5859 22.9618 78.1007 23.729C77.49 24.6946 76.5468 25.354 75.4431 25.594C74.1363 25.8771 72.7739 25.6258 71.6411 24.8685C70.5206 24.1185 69.7508 22.9678 69.4797 21.6318C69.1407 20.0102 69.4402 18.3501 70.3278 16.9586C71.2115 15.5684 72.5746 14.6115 74.1641 14.2702C76.0816 13.8516 78.06 14.2232 79.7116 15.3231C81.3645 16.4183 82.4973 18.1061 82.9048 20.073C83.3874 22.403 83.1144 24.6701 82.2275 26.5351C82.5619 26.2184 82.9016 25.9009 83.1914 25.5279C84.7951 23.4843 85.5281 20.9242 85.2486 18.3224C84.8016 14.1194 81.0915 11.0838 76.977 11.5269C76.4911 11.5685 76.0642 11.2266 76.015 10.7332C75.9639 10.2432 76.31 9.80204 76.7907 9.75177C81.8464 9.21342 86.4332 12.9514 86.9883 18.1273C87.3247 21.2105 86.461 24.231 84.5642 26.6476C82.6674 29.0609 79.9639 30.578 76.9479 30.9134C76.6445 30.9444 76.3443 30.9484 76.0441 30.9616C75.9943 30.9689 75.9535 30.9861 75.9011 30.9934C75.8617 30.9967 75.828 31 75.7886 31C75.7679 31 75.7543 30.9835 75.7342 30.9795C75.6255 30.9795 75.5175 30.9967 75.4049 30.9967C72.2408 30.9967 69.1944 29.9054 66.6882 27.8506C64.3651 25.9426 62.7768 23.3798 62.0115 20.4989C61.2423 23.3765 59.6573 25.9399 57.3355 27.8506C54.8312 29.9081 51.7848 30.9967 48.6188 30.9967C48.5133 30.9967 48.404 30.9828 48.2914 30.9795C48.2675 30.9795 48.2532 31 48.2332 31C48.1924 31 48.1581 31 48.1206 30.9934C48.0727 30.9861 48.0313 30.9689 47.977 30.9616C47.6768 30.9477 47.376 30.9444 47.0758 30.9134C44.067 30.5708 41.3582 29.0576 39.4582 26.6476C37.5614 24.231 36.6952 21.2105 37.029 18.1273C37.5789 12.9514 42.1462 9.18366 47.2227 9.75177C47.704 9.806 48.0449 10.2438 48.0009 10.7332C47.946 11.2266 47.4957 11.5725 47.039 11.5269C42.9309 11.0805 39.2195 14.1234 38.7692 18.3224C38.4891 20.9242 39.2195 23.4843 40.8265 25.5279C41.1163 25.9009 41.4579 26.215 41.7885 26.5351C40.9054 24.6701 40.6285 22.403 41.1131 20.0796C41.5226 18.1127 42.6515 16.4209 44.3063 15.3257C45.9579 14.2252 47.933 13.8535 49.8538 14.2722C51.4433 14.6174 52.8076 15.5718 53.692 16.9613C54.5751 18.3495 54.8759 20.0095 54.5382 21.6312C54.2684 22.9704 53.4947 24.1251 52.3748 24.8745C51.2492 25.6211 49.8984 25.8824 48.578 25.5967C47.4763 25.3559 46.5311 24.6933 45.9172 23.7277C45.4294 22.9638 45.2761 22.0743 45.3239 21.1814C45.3239 21.1497 45.3 21.1179 45.3 21.0835C45.3 21.0386 45.3239 21.0035 45.3272 20.9513C45.3408 20.8045 45.3 20.6589 45.3343 20.5049C45.3479 20.4381 45.4093 20.4176 45.4365 20.358C45.7095 19.6676 46.3674 19.1649 47.1425 19.159C48.1763 19.1378 49.0186 19.9817 49.036 21.0313C49.0464 21.9698 48.3807 22.7231 47.5112 22.897C47.8696 23.3752 48.3542 23.7204 48.9338 23.8527C49.7936 24.0478 50.6766 23.8732 51.4142 23.3818C52.1439 22.8904 52.6524 22.1437 52.8264 21.2681C53.0651 20.1107 52.8536 18.9315 52.226 17.9381C51.5946 16.9421 50.6255 16.2635 49.4928 16.0182C48.0197 15.6941 46.5143 15.9811 45.2592 16.8217C44.0042 17.6537 43.1373 18.9454 42.8229 20.4493C42.3422 22.7786 42.7071 25.0385 43.8263 26.6502C44.7572 27.9888 46.2076 28.8261 48.0055 29.1402C50.9872 29.301 53.8971 28.387 56.2441 26.4545C58.7911 24.3692 60.3839 21.3911 60.7325 18.0777C61.2184 13.5434 59.9439 9.16779 57.2372 6.0746C54.8287 3.31408 51.431 1.78634 47.6814 1.77575C47.6645 1.77575 47.6438 1.77575 47.6231 1.77575C39.957 1.77575 35.3657 6.64999 31.347 12.1466C31.3431 12.1538 31.347 12.1638 31.3399 12.171C31.3159 12.2001 31.2888 12.2213 31.2687 12.2458C30.5416 13.2431 29.8286 14.249 29.1261 15.2576C28.9423 15.5202 28.7547 15.7649 28.5704 16.0281C29.9522 15.7576 31.3645 16.0546 32.6713 16.9474C34.9025 18.4612 35.51 21.5511 34.0389 23.8249C33.258 25.0213 31.9648 25.6734 30.6483 25.6734C29.8707 25.6734 29.0924 25.4499 28.397 24.9829C26.8275 23.9082 26.3973 21.7356 27.4415 20.1312C28.3388 18.7675 30.1437 18.3978 31.4841 19.3118C31.75 19.493 31.8322 19.7965 31.8115 20.1034C31.8425 20.1907 31.9241 20.2463 31.9344 20.3375C31.9887 20.9857 31.5249 21.5438 30.8903 21.6001C30.3035 21.6483 29.8086 21.2165 29.7064 20.6299C29.3894 20.6788 29.0892 20.8289 28.8983 21.1219C28.3866 21.9069 28.6014 22.9737 29.3719 23.4969C30.4368 24.2158 31.8794 23.9228 32.5859 22.8414C33.531 21.3838 33.1351 19.4063 31.7093 18.4401C29.1778 16.7139 27.0016 18.4923 25.9335 19.7026H25.9302C25.9024 19.7443 25.8791 19.7793 25.8513 19.8144C20.8984 26.1965 16.606 31.6898 9.33321 30.5668C6.42978 30.1131 3.87764 28.4987 2.14127 26.0153C0.347981 23.479 -0.368166 20.2595 0.180432 17.1769Z" fill="currentColor"/>
+</svg></div>
+            <div class="detail-back-content">
+              <div class="card-name-big" id="detail-name">Five of Cups</div>
+              <div class="card-keywords" id="detail-keywords">Frustration, Disappointment, Heartache</div>
+              <div class="keywords-divider"></div>
+              <div class="card-meaning" id="detail-meaning">Something you thought would make you happy has turned out to be a disappointment.</div>
+            </div>
+            <div class="card-deco card-deco-bottom"><svg width="124" height="31" viewBox="0 0 124 31" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M0.180432 13.8231C1.07449 18.9255 5.85725 22.3256 10.8658 21.4228C11.3432 21.3355 11.6609 20.8719 11.5722 20.3871C11.4901 19.9004 11.0262 19.5935 10.5591 19.6649C6.51648 20.4116 2.62389 17.6438 1.89674 13.5043C1.44001 10.8973 2.04035 8.17046 3.54511 6.01112C4.46634 4.69633 5.68064 3.70627 7.04825 3.03301C3.94039 5.63745 3.43579 10.3285 5.94653 13.5546C8.03482 16.2331 11.8627 16.6802 14.4789 14.5433C15.5295 13.6875 16.1946 12.4601 16.3447 11.0996C16.4947 9.73591 16.1163 8.38937 15.2772 7.31532C14.5779 6.41587 13.5855 5.84644 12.4624 5.71814C11.3439 5.58917 10.2486 5.90927 9.37203 6.62817C9.16371 6.79549 9.07509 7.03226 9.06474 7.28755C8.91465 7.56267 8.80208 7.86227 8.80208 8.20485C8.80208 9.25444 9.6308 10.1129 10.6685 10.1129C11.6952 10.1129 12.5278 9.25774 12.5278 8.20485C12.5278 7.96743 12.4728 7.74786 12.3945 7.5349C12.9916 7.63609 13.5273 7.93237 13.9057 8.42773C14.4556 9.12547 14.704 10.0011 14.6018 10.8939C14.4964 11.7874 14.0733 12.5857 13.3804 13.1432C11.514 14.6657 8.79173 14.3429 7.29797 12.4455C5.36688 9.95878 5.77315 6.33518 8.20173 4.3544C11.3161 1.81874 14.9667 2.26913 18.4737 5.63083C18.6238 5.77038 18.8179 5.81601 19.0022 5.83387C20.6875 7.50381 22.4206 9.67704 24.4507 12.2861C25.3616 13.4547 26.2382 14.7166 27.1186 15.9725C26.8114 15.917 26.5112 15.8489 26.2006 15.8489C25.2658 15.8489 24.3245 16.1088 23.4066 16.6366C21.0763 17.9758 20.2444 21.0154 21.5544 23.4076C22.6464 25.4009 25.1332 26.1198 27.0915 24.9942C27.893 24.5378 28.4669 23.7859 28.712 22.8824C28.9579 21.979 28.8421 21.0326 28.3918 20.2178C27.6103 18.7899 25.8261 18.2787 24.4242 19.0823C24.0865 19.276 23.9869 19.6577 24.0593 20.0221C24.0386 20.0869 23.981 20.1147 23.9668 20.1788C23.8814 20.8223 24.3077 21.4116 24.9359 21.5075C25.5427 21.6001 26.0991 21.1708 26.2084 20.5571C26.4775 20.6457 26.7201 20.8223 26.8696 21.0921C27.0882 21.4916 27.1497 21.9572 27.03 22.4003C26.9077 22.8434 26.6276 23.2118 26.2349 23.436C25.1093 24.0709 23.6964 23.6681 23.076 22.5346C22.2363 21.0002 22.7687 19.0538 24.2631 18.196C26.7706 16.7496 28.7114 18.403 29.7458 19.6815C34.0576 25.6364 38.9872 31 47.5947 31C47.6154 31 47.6393 31 47.6626 31C51.9168 30.9861 55.7648 29.2474 58.5162 26.1033C60.2286 24.147 61.3601 21.7158 61.9928 19.0895C62.6171 21.7198 63.7531 24.1463 65.4694 26.1033C68.2175 29.2474 72.0707 30.9861 76.3229 31C76.343 31 76.3637 31 76.3896 31C84.9899 31 89.9201 25.643 94.2339 19.6894C95.2677 18.411 97.2169 16.751 99.7244 18.1967C101.22 19.0578 101.751 21.0042 100.913 22.5352C100.287 23.6761 98.8698 24.0822 97.7545 23.4406C97.3637 23.2158 97.0843 22.8481 96.9613 22.4049C96.8404 21.9618 96.8947 21.4982 97.1147 21.0935C97.2667 20.8236 97.5106 20.651 97.7797 20.5617C97.8942 21.1755 98.4467 21.6007 99.0542 21.5088C99.6836 21.4129 100.11 20.8236 100.021 20.1801C100.011 20.112 99.9482 20.0842 99.9308 20.0234C99.9974 19.659 99.8997 19.2774 99.5639 19.0836C98.1633 18.28 96.3778 18.7913 95.5963 20.2191C95.1441 21.0366 95.0335 21.9837 95.2806 22.8871C95.5265 23.7865 96.1029 24.5385 96.8979 24.9988C98.8517 26.1158 101.338 25.4049 102.437 23.4082C103.747 21.0194 102.914 17.9798 100.581 16.6405C99.6616 16.1121 98.7184 15.8522 97.7868 15.8522C97.4776 15.8522 97.1742 15.9236 96.8708 15.9765C97.7506 14.716 98.624 13.4554 99.5368 12.2868C101.564 9.68167 103.298 7.50513 104.99 5.83454C105.178 5.81734 105.364 5.77104 105.514 5.63149C109.025 2.2731 112.675 1.82338 115.788 4.35904C118.216 6.33585 118.622 9.96011 116.689 12.4468C115.198 14.3562 112.469 14.6736 110.608 13.1479C109.919 12.5937 109.485 11.7914 109.388 10.9019C109.291 10.0124 109.535 9.13341 110.088 8.43567C110.465 7.94428 111.002 7.64799 111.596 7.54283C111.519 7.75513 111.464 7.9747 111.464 8.21213C111.464 9.26237 112.299 10.1202 113.325 10.1202C114.355 10.1202 115.191 9.26568 115.191 8.21213C115.191 7.87417 115.079 7.57061 114.929 7.29482C114.918 7.04417 114.828 6.80343 114.621 6.6361C113.741 5.9172 112.641 5.59644 111.531 5.72938C110.415 5.85438 109.415 6.42315 108.721 7.31929C107.882 8.39334 107.502 9.73591 107.655 11.1069C107.805 12.4739 108.468 13.6988 109.521 14.548C112.138 16.6875 115.966 16.2411 118.058 13.5592C120.564 10.3397 120.061 5.64538 116.955 3.04028C118.324 3.71685 119.537 4.70427 120.459 6.01906C121.965 8.17774 122.565 10.9019 122.104 13.5123C121.378 17.6557 117.507 20.4195 113.444 19.6729C112.975 19.6014 112.514 19.9076 112.431 20.3951C112.347 20.8792 112.661 21.3435 113.137 21.4308C118.128 22.3375 122.925 18.9368 123.822 13.8311C124.364 10.7518 123.655 7.52894 121.877 4.9827C120.141 2.49929 117.587 0.884905 114.684 0.427904C107.431 -0.691781 103.124 4.79752 98.1672 11.1836C98.14 11.2187 98.1142 11.2603 98.087 11.2954H98.0838C97.0144 12.5057 94.8342 14.2775 92.308 12.5579C90.8802 11.5884 90.4881 9.60694 91.4275 8.15657C92.1339 7.06797 93.5766 6.77565 94.6414 7.49786C95.4139 8.0243 95.6241 9.08777 95.1137 9.87281C94.9209 10.1651 94.624 10.3192 94.307 10.3682C94.2009 9.78154 93.7066 9.34967 93.1199 9.39795C92.4865 9.46144 92.0214 10.0157 92.0777 10.6605C92.0848 10.7551 92.1682 10.8073 92.2006 10.8946C92.1838 11.2015 92.2601 11.505 92.5279 11.6863C93.8632 12.6003 95.6804 12.2266 96.5706 10.8668C97.6141 9.26237 97.1845 7.08252 95.6138 6.01509C94.9216 5.54816 94.1401 5.32463 93.367 5.32463C92.0505 5.32463 90.7573 5.97673 89.9745 7.1771C88.5008 9.45417 89.1115 12.5368 91.3408 14.0546C92.6508 14.9441 94.0586 15.2404 95.4417 14.9699C95.2573 15.2331 95.0678 15.4778 94.884 15.7404C94.1815 16.7516 93.4647 17.7549 92.7414 18.7522C92.7214 18.78 92.6942 18.8012 92.6715 18.8309C92.6683 18.8376 92.6715 18.8481 92.6651 18.8554C88.6476 24.3553 84.0576 29.2262 76.387 29.2262C76.3682 29.2262 76.3475 29.2262 76.3307 29.2262C72.5779 29.2156 69.1873 27.6879 66.7736 24.9274C64.0681 21.8302 62.7943 17.4553 63.2802 12.921C63.6314 9.6076 65.2248 6.62949 67.7679 4.54422C70.1234 2.61172 73.0216 1.70169 76.0124 1.85181C77.8115 2.17257 79.2587 3.01317 80.1845 4.34846C81.3017 5.96019 81.6685 8.22007 81.1872 10.5494C80.8754 12.0493 80.0117 13.3344 78.7515 14.1769C77.4906 15.0122 75.9911 15.298 74.518 14.9805C73.3859 14.7345 72.4148 14.0546 71.7854 13.0606C71.1578 12.0705 70.9444 10.892 71.185 9.72664C71.3636 8.85497 71.8617 8.10829 72.5921 7.61955C73.3277 7.12485 74.2042 6.95687 75.0776 7.14932C75.6572 7.27101 76.145 7.62682 76.5021 8.10763C75.6288 8.27562 74.9683 9.02891 74.9793 9.97003C74.998 11.0203 75.839 11.8602 76.8728 11.8463C77.6492 11.839 78.309 11.3344 78.5788 10.6473C78.606 10.5838 78.6694 10.56 78.6829 10.4938C78.7153 10.347 78.6765 10.2008 78.6901 10.0474C78.6901 9.99846 78.7159 9.96738 78.7159 9.91514C78.7159 9.87612 78.6972 9.84833 78.6939 9.82056C78.7399 8.92772 78.5859 8.03819 78.1007 7.27101C77.49 6.30542 76.5468 5.64605 75.4431 5.40597C74.1363 5.12291 72.7739 5.37423 71.6411 6.13149C70.5206 6.88147 69.7508 8.03224 69.4797 9.36819C69.1407 10.9898 69.4402 12.6499 70.3278 14.0414C71.2115 15.4316 72.5746 16.3885 74.1641 16.7298C76.0816 17.1484 78.06 16.7768 79.7116 15.6769C81.3645 14.5817 82.4973 12.8939 82.9048 10.927C83.3874 8.59704 83.1144 6.32989 82.2275 4.46485C82.5619 4.78164 82.9016 5.0991 83.1914 5.47211C84.7951 7.51571 85.5281 10.0758 85.2486 12.6776C84.8016 16.8806 81.0915 19.9162 76.977 19.4731C76.4911 19.4315 76.0642 19.7734 76.015 20.2668C75.9639 20.7568 76.31 21.198 76.7907 21.2482C81.8464 21.7866 86.4332 18.0486 86.9883 12.8727C87.3247 9.78948 86.461 6.76904 84.5642 4.35242C82.6674 1.93911 79.9639 0.421952 76.9479 0.0866413C76.6445 0.0555573 76.3443 0.0515916 76.0441 0.0383644C75.9943 0.0310894 75.9535 0.0138916 75.9011 0.00661659C75.8617 0.00330978 75.828 1.90735e-06 75.7886 1.90735e-06C75.7679 1.90735e-06 75.7543 0.0165396 75.7342 0.0205078C75.6255 0.0205078 75.5175 0.00331116 75.4049 0.00331116C72.2408 0.00331116 69.1944 1.09455 66.6882 3.1494C64.3651 5.05743 62.7768 7.62021 62.0115 10.5011C61.2423 7.62352 59.6573 5.06008 57.3355 3.1494C54.8312 1.09191 51.7848 0.00331116 48.6188 0.00331116C48.5133 0.00331116 48.404 0.017201 48.2914 0.0205078C48.2675 0.0205078 48.2532 1.90735e-06 48.2332 1.90735e-06C48.1924 1.90735e-06 48.1581 2.97744e-06 48.1206 0.00661659C48.0727 0.0138916 48.0313 0.0310894 47.977 0.0383644C47.6768 0.052253 47.376 0.0555573 47.0758 0.0866413C44.067 0.429227 41.3582 1.94242 39.4582 4.35242C37.5614 6.76904 36.6952 9.78948 37.029 12.8727C37.5789 18.0486 42.1462 21.8163 47.2227 21.2482C47.704 21.194 48.0449 20.7562 48.0009 20.2668C47.946 19.7734 47.4957 19.4275 47.039 19.4731C42.9309 19.9195 39.2195 16.8766 38.7692 12.6776C38.4891 10.0758 39.2195 7.51571 40.8265 5.47211C41.1163 5.0991 41.4579 4.78495 41.7885 4.46485C40.9054 6.32989 40.6285 8.59704 41.1131 10.9204C41.5226 12.8873 42.6515 14.5791 44.3063 15.6743C45.9579 16.7748 47.933 17.1465 49.8538 16.7278C51.4433 16.3826 52.8076 15.4282 53.692 14.0387C54.5751 12.6505 54.8759 10.9905 54.5382 9.36885C54.2684 8.02959 53.4947 6.87485 52.3748 6.12553C51.2492 5.37886 49.8984 5.11762 48.578 5.40333C47.4763 5.64406 46.5311 6.30675 45.9172 7.27233C45.4294 8.03621 45.2761 8.92574 45.3239 9.81857C45.3239 9.85032 45.3 9.88207 45.3 9.91646C45.3 9.96143 45.3239 9.99648 45.3272 10.0487C45.3408 10.1955 45.3 10.3411 45.3343 10.4951C45.3479 10.5619 45.4093 10.5824 45.4365 10.642C45.7095 11.3324 46.3674 11.8351 47.1425 11.841C48.1763 11.8622 49.0186 11.0183 49.036 9.96871C49.0464 9.03023 48.3807 8.27694 47.5112 8.103C47.8696 7.62484 48.3542 7.27961 48.9338 7.14734C49.7936 6.95223 50.6766 7.12684 51.4142 7.61823C52.1439 8.10962 52.6524 8.85629 52.8264 9.73194C53.0651 10.8893 52.8536 12.0685 52.226 13.0619C51.5946 14.0579 50.6255 14.7365 49.4928 14.9818C48.0197 15.3059 46.5143 15.0189 45.2592 14.1783C44.0042 13.3463 43.1373 12.0546 42.8229 10.5507C42.3422 8.22139 42.7071 5.96152 43.8263 4.34978C44.7572 3.01118 46.2076 2.1739 48.0055 1.85975C50.9872 1.69904 53.8971 2.61304 56.2441 4.54554C58.7911 6.63081 60.3839 9.60892 60.7325 12.9223C61.2184 17.4566 59.9439 21.8322 57.2372 24.9254C54.8287 27.6859 51.431 29.2137 47.6814 29.2242C47.6645 29.2242 47.6438 29.2242 47.6231 29.2242C39.957 29.2242 35.3657 24.35 31.347 18.8534C31.3431 18.8462 31.347 18.8362 31.3399 18.829C31.3159 18.7999 31.2888 18.7787 31.2687 18.7542C30.5416 17.7569 29.8286 16.751 29.1261 15.7424C28.9423 15.4798 28.7547 15.2351 28.5704 14.9719C29.9522 15.2424 31.3645 14.9454 32.6713 14.0526C34.9025 12.5388 35.51 9.44887 34.0389 7.17511C33.258 5.97871 31.9648 5.32661 30.6483 5.32661C29.8707 5.32661 29.0924 5.55015 28.397 6.01707C26.8275 7.09178 26.3973 9.26436 27.4415 10.8688C28.3388 12.2325 30.1437 12.6022 31.4841 11.6882C31.75 11.507 31.8322 11.2035 31.8115 10.8966C31.8425 10.8093 31.9241 10.7537 31.9344 10.6625C31.9887 10.0143 31.5249 9.45615 30.8903 9.39993C30.3035 9.35166 29.8086 9.78352 29.7064 10.3701C29.3894 10.3212 29.0892 10.1711 28.8983 9.8781C28.3866 9.09306 28.6014 8.02629 29.3719 7.50315C30.4368 6.78425 31.8794 7.07723 32.5859 8.15856C33.531 9.6162 33.1351 11.5937 31.7093 12.5599C29.1778 14.2861 27.0016 12.5077 25.9335 11.2974H25.9302C25.9024 11.2557 25.8791 11.2207 25.8513 11.1856C20.8984 4.80347 16.606 -0.689795 9.33321 0.433197C6.42978 0.886891 3.87764 2.50127 2.14127 4.98468C0.347981 7.52101 -0.368166 10.7405 0.180432 13.8231Z" fill="currentColor"/>
+</svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="detail-bottom-nav" id="detail-bottom-nav">
+      <button class="detail-nav-circle" id="detail-prev" aria-label="Previous card">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 5.5 10.5 12 17 18.5"/><path d="M11 5.5 4.5 12 11 18.5"/></svg>
+      </button>
+      <div class="detail-hint" id="detail-hint">Tap to see card meaning</div>
+      <button class="detail-nav-circle" id="detail-next" aria-label="Next card">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5.5 13.5 12 7 18.5"/><path d="M13 5.5 19.5 12 13 18.5"/></svg>
+      </button>
+    </div>
+    <div class="detail-actions" id="detail-actions" style="display:none;"></div>
+  </div>
+
+  <!-- EXPLORE -->
+  <div class="screen" id="screen-explore">
+    <h2>Explore Cards</h2>
+    <div class="arcana-tabs" id="arcana-tabs"></div>
+    <div class="filter-row" id="filter-row"></div>
+    <div class="explore-grid" id="explore-grid"></div>
+  </div>
+
+  <!-- ABOUT -->
+  <div class="screen" id="screen-about">
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:34px;height:34px;margin:0 auto 10px;display:block;"><path d="M32.2562 15.7562L20.7499 7.125C20.5335 6.96272 20.2704 6.875 19.9999 6.875C19.7294 6.875 19.4663 6.96272 19.2499 7.125L7.74365 15.7562C7.58841 15.8727 7.4624 16.0237 7.37562 16.1972C7.28883 16.3708 7.24365 16.5622 7.24365 16.7562V33.4062C7.24365 33.7378 7.37535 34.0557 7.60977 34.2901C7.84419 34.5246 8.16213 34.6562 8.49365 34.6562H15.6249C15.9564 34.6562 16.2744 34.5246 16.5088 34.2901C16.7432 34.0557 16.8749 33.7378 16.8749 33.4062V28.125C16.8749 27.7935 17.0066 27.4755 17.241 27.2411C17.4754 27.0067 17.7934 26.875 18.1249 26.875H22.4999C22.8314 26.875 23.1494 27.0067 23.3838 27.2411C23.6182 27.4755 23.7499 27.7935 23.7499 28.125V33.4062C23.7499 33.7378 23.8816 34.0557 24.116 34.2901C24.3504 34.5246 24.6684 34.6562 24.9999 34.6562H31.5062C31.8377 34.6562 32.1556 34.5246 32.39 34.2901C32.6245 34.0557 32.7562 33.7378 32.7562 33.4062V16.7562C32.7562 16.5622 32.711 16.3708 32.6242 16.1972C32.5374 16.0237 32.4114 15.8727 32.2562 15.7562Z" fill="#FAF3E0" stroke="#FAF3E0" stroke-width="1.5"/></svg>
+    <h2 style="text-align:center; margin-bottom:18px;">About</h2>
+    <p>Ceccoli Tarot is a prototype tarot companion built around Nicoletta Ceccoli's dreamlike artwork. Draw a card for today, explore a full spread, or browse the entire deck.</p>
+    <p style="margin-top:18px; font-family:'Fraunces',serif; font-style:italic; color:var(--cream-dim); font-size:15px;">© 2024 App Designed &amp; Developed by Sejuti Mitra</p>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* =========================================================
+   CARD DATA
+   Replace `image` with real file paths / URLs when ready.
+   Keep the same field names if you also load this from
+   a CSV / App Lab data table: card_name, arcana, suit,
+   card_keywords, card_meaning, image
+   ========================================================= */
+const SUIT_ICON = { major:"✦", cups:"♦", wands:"♣", swords:"♠", discs:"●" };
+
+const allCards = [
+  {card_name:"The Fool", arcana:"Major", suit:"major", number:"0", card_keywords:"Individuality, beginnings, soul progress", card_meaning:"March to the beat of your own drum. No one can guide you better than your own heart.", image:null},
+  {card_name:"The Magician", arcana:"Major", suit:"major", number:"I", card_keywords:"Intention, will power, transformation", card_meaning:"All the power you need is within you. Seize your own magic and use your will to make changes in your world.", image:null},
+  {card_name:"The High Priestess", arcana:"Major", suit:"major", number:"II", card_keywords:"Wisdom, feminine intuition, ancient mysteries", card_meaning:"Your wisdom springs from the earth, the stars, and ancient cosmic knowledge. Trust what you know to be true.", image:null},
+  {card_name:"The Empress", arcana:"Major", suit:"major", number:"III", card_keywords:"Nurturing, caretaking, earth mother", card_meaning:"All of Nature is connected and you are part of that whole. Take good care of the earth's creatures, and receive their love in return.", image:null},
+  {card_name:"The Emperor", arcana:"Major", suit:"major", number:"IV", card_keywords:"Strong role model, civilization, father", card_meaning:"Power is yours to command. Others look to you for leadership. Now is the time to build your empire.", image:null},
+  {card_name:"The Hierophant", arcana:"Major", suit:"major", number:"V", card_keywords:"Dogma, social conventions, tradition", card_meaning:"Make sure your spiritual teachers are authentic and trustworthy. Look beyond the trappings of religion to seek the truth.", image:null},
+  {card_name:"The Lovers", arcana:"Major", suit:"major", number:"VI", card_keywords:"Sacred or profane love, moral choices, soul mates", card_meaning:"A choice is offered to you that could change everything. Listen to your heart's guidance. Follow the path of love.", image:null},
+  {card_name:"The Chariot", arcana:"Major", suit:"major", number:"VII", card_keywords:"Triumph over adversity, self-determination, possible journeys", card_meaning:"It's time to move forward, taking the reins of your life in your own hands. By acting decisively now you will also help others.", image:null},
+  {card_name:"Justice", arcana:"Major", suit:"major", number:"VIII", card_keywords:"Karma, responsibility in legal matters, honor", card_meaning:"Take care to maintain your ethical balance. Any move you make now will have consequences; act for the highest good.", image:null},
+  {card_name:"The Hermit", arcana:"Major", suit:"major", number:"IX", card_keywords:"Wisdom, solitude, a spiritual guide or mentor", card_meaning:"Be silent for a time and shut out all external influence. Retreat into solitude to see your way more clearly.", image:null},
+  {card_name:"Wheel of Fortune", arcana:"Major", suit:"major", number:"X", card_keywords:"Changes in status, luck, the cycles of time", card_meaning:"We are all at the mercy of fate. Don't struggle against your destiny. As time passes, the situation will improve.", image:null},
+  {card_name:"Strength", arcana:"Major", suit:"major", number:"XI", card_keywords:"Inner goodness, love vanquishing hate", card_meaning:"Good will always triumph over evil in the long run. You are fighting the good fight. Trust your instincts.", image:null},
+  {card_name:"The Hanged Man", arcana:"Major", suit:"major", number:"XII", card_keywords:"A different point of view, an open mind", card_meaning:"Suspend your disbelief and surrender to a new way of looking at things. Expand the limits of your consciousness.", image:null},
+  {card_name:"Death", arcana:"Major", suit:"major", number:"XIII", card_keywords:"Transformation, release, endings, acceptance of loss", card_meaning:"Something must end so that something better can begin. Do not cling to who you thought you were. Awaken reborn.", image:null},
+  {card_name:"Temperance", arcana:"Major", suit:"major", number:"XIV", card_keywords:"Union, alchemy, the conscious and the unconscious", card_meaning:"Find a blend of the earthly and the spiritual within you. You are not bound to mundane matters unless you choose to be.", image:null},
+  {card_name:"The Devil", arcana:"Major", suit:"major", number:"XV", card_keywords:"Damnation, addiction, abusive patterns", card_meaning:"Nothing good can come of this situation. Free yourself from its bondage. Do not be blinded by temptation.", image:null},
+  {card_name:"The Tower", arcana:"Major", suit:"major", number:"XVI", card_keywords:"Sudden and profound change, end of complacency", card_meaning:"The structures you built may not be as stable as you think. Prepare yourself for change. Expect the unexpected.", image:null},
+  {card_name:"The Star", arcana:"Major", suit:"major", number:"XVII", card_keywords:"Universal harmony, inspiration, faith", card_meaning:"The universe sings its eternal song of hope and beauty. Listen and find your own harmonic place in the cosmos.", image:null},
+  {card_name:"The Moon", arcana:"Major", suit:"major", number:"XVIII", card_keywords:"Dreams, the nocturnal world, mysticism", card_meaning:"There are many mysteries in the depths of the unconscious. Pay attention to your dreams and the realms of your imagination.", image:null},
+  {card_name:"The Sun", arcana:"Major", suit:"major", number:"XIX", card_keywords:"Joy, supreme success, health and wealth", card_meaning:"All good things are coming to you now. Open your hands to receive them. Sweet happiness is yours for the taking.", image:null},
+  {card_name:"Judgment", arcana:"Major", suit:"major", number:"XX", card_keywords:"Spiritual enlightenment, awakening, peace", card_meaning:"The path you have chosen has led you to your present place. The key to liberation is to accept and understand this.", image:null},
+  {card_name:"The World", arcana:"Major", suit:"major", number:"XXI", card_keywords:"Completion, wholeness, breaking through", card_meaning:"Everything seems complete and perfect just as it is, but don't be afraid to shake things up. A new pattern will emerge.", image:null},
+
+  {card_name:"Ace of Cups", arcana:"Minor", suit:"cups", number:"A", card_keywords:"A loving heart, a gift, compassion", card_meaning:"Love must begin with self-love. Be as kind to yourself as you are to others, and love will increase in your life.", image:null},
+  {card_name:"2 of Cups", arcana:"Minor", suit:"cups", number:"2", card_keywords:"Partnership, new connections, possible romance", card_meaning:"Your soul's twin is near, whether that relationship is romantic or not. True affinity with a like-minded person is offered.", image:null},
+  {card_name:"3 of Cups", arcana:"Minor", suit:"cups", number:"3", card_keywords:"Friendship, playfulness, sharing activities", card_meaning:"Happiness is multiplied when you share it with friends. Dive into your friendships and rejoice in good company.", image:null},
+  {card_name:"4 of Cups", arcana:"Minor", suit:"cups", number:"4", card_keywords:"Discontent, isolation, ennui, petty desires", card_meaning:"You have shut out the pleasures of the world and are in danger of becoming cynical. There is no excuse for being bored with life.", image:null},
+  {card_name:"5 of Cups", arcana:"Minor", suit:"cups", number:"5", card_keywords:"Frustration, disappointment, heartache", card_meaning:"Something you thought would make you happy has turned out to be a disappointment. Don't force the issue if it will never work out.", image:null},
+  {card_name:"6 of Cups", arcana:"Minor", suit:"cups", number:"6", card_keywords:"Revisiting the past, childhood memories, forgiveness", card_meaning:"Look into your deepest memories to remember who you are and what makes you happy. Let others help you find yourself again.", image:null},
+  {card_name:"7 of Cups", arcana:"Minor", suit:"cups", number:"7", card_keywords:"Scattered energy, conflicting desires, surprises", card_meaning:"Too many choices can cause confusion. If you're not sure what to choose, don't choose yet. Let things settle down and it will become clear.", image:null},
+  {card_name:"8 of Cups", arcana:"Minor", suit:"cups", number:"8", card_keywords:"Inner turmoil, depression, clouded vision", card_meaning:"Emotional upset is keeping you from making any meaningful progress. Don't cling to resentments and pain. Set them free.", image:null},
+  {card_name:"9 of Cups", arcana:"Minor", suit:"cups", number:"9", card_keywords:"Material well-being, hopes fulfilled, miracles", card_meaning:"Whatever delights you can imagine can be yours now, if you believe. Set your intention to be blissfully fulfilled. Make a wish!", image:null},
+  {card_name:"10 of Cups", arcana:"Minor", suit:"cups", number:"10", card_keywords:"Future happiness, family and friends, loyalty", card_meaning:"Your allies and companions will see you through any dangers. You are on the path of success and happiness, thanks to their loving help.", image:null},
+  {card_name:"Knave of Cups", arcana:"Minor", suit:"cups", number:"Kn", card_keywords:"Innocence, emotional vulnerability, dreamer", card_meaning:"One who has an innocent, dreamy nature. Can be emotionally vulnerable and over-sensitive.", image:null},
+  {card_name:"Knight of Cups", arcana:"Minor", suit:"cups", number:"Kt", card_keywords:"Romance, idealistic pursuit, emotional drive", card_meaning:"One who obeys the commands of the heart. Does not hesitate in the pursuit of a righteous cause.", image:null},
+  {card_name:"Queen of Cups", arcana:"Minor", suit:"cups", number:"Q", card_keywords:"Empathy, psychic sight, emotional devotion", card_meaning:"One who is motivated by love. Can be psychic or clairvoyant, a seeker of things unseen.", image:null},
+  {card_name:"King of Cups", arcana:"Minor", suit:"cups", number:"K", card_keywords:"Emotional mastery, diplomacy, relational influence", card_meaning:"One who controls emotions. Knows how to use relationships in order to get things done.", image:null},
+
+  {card_name:"Ace of Discs", arcana:"Minor", suit:"discs", number:"A", card_keywords:"Gifts, opportunities, potential for success", card_meaning:"What was only imagined before is now manifesting. New projects and possibilities are emerging. Take advantage of this prosperous time.", image:null},
+  {card_name:"2 of Discs", arcana:"Minor", suit:"discs", number:"2", card_keywords:"Balance, multitasking, over-confidence", card_meaning:"It's hard to keep many projects successfully happening at once. If you are in danger of dropping any of them, consider setting some aside for now.", image:null},
+  {card_name:"3 of Discs", arcana:"Minor", suit:"discs", number:"3", card_keywords:"Collaboration, cooperation, working toward a common goal", card_meaning:"Don't try to do everything on your own. Good advice is at hand, and others can help you make the right decisions for success.", image:null},
+  {card_name:"4 of Discs", arcana:"Minor", suit:"discs", number:"4", card_keywords:"Greed, selfishness, fear of losing security", card_meaning:"Fine possessions alone won't bring contentment. Don't focus on material gain to the point where you are separated from life's true joys.", image:null},
+  {card_name:"5 of Discs", arcana:"Minor", suit:"discs", number:"5", card_keywords:"Detachment from the world, sadness, emotional poverty", card_meaning:"Loneliness makes it hard to see your way out of the darkness. Don't get stuck in self-pity. Look to others for guidance and encouragement.", image:null},
+  {card_name:"6 of Discs", arcana:"Minor", suit:"discs", number:"6", card_keywords:"Generosity, charity without pity, kindness", card_meaning:"You have more than enough resources to share. When you offer some of your prosperity to others, you will make room for more to return to you.", image:null},
+  {card_name:"7 of Discs", arcana:"Minor", suit:"discs", number:"7", card_keywords:"Attention to detail, planning ahead, perseverance", card_meaning:"Take your time to create something you can be proud of. Excellence takes time. Hold true to your vision of what you will achieve with patience.", image:null},
+  {card_name:"8 of Discs", arcana:"Minor", suit:"discs", number:"8", card_keywords:"Apprenticeship, training, expanding career skills", card_meaning:"Learning new skills and improving existing skills may require the help of a teacher who inspires by example. Find such a teacher or offer your own experience to others.", image:null},
+  {card_name:"9 of Discs", arcana:"Minor", suit:"discs", number:"9", card_keywords:"Contentment in solitude, animal companions, shelter", card_meaning:"The simple pleasures of home life will give you the greatest satisfaction now. Find your comfort zone and settle there in solitude to find peace and quiet.", image:null},
+  {card_name:"10 of Discs", arcana:"Minor", suit:"discs", number:"10", card_keywords:"Breaking through limitations, victory, financial growth", card_meaning:"There is no limit to what you can achieve now. Material prosperity may come to you in unexpected ways, especially through the help of others.", image:null},
+  {card_name:"Knave of Discs", arcana:"Minor", suit:"discs", number:"Kn", card_keywords:"Practical wisdom, connection to nature, grounded learning", card_meaning:"One who is grounded in the teachings of nature. Possesses an understanding of the natural world.", image:null},
+  {card_name:"Knight of Discs", arcana:"Minor", suit:"discs", number:"Kt", card_keywords:"Protection, duty, advocating for the weak", card_meaning:"One who fights against injustice and protects the oppressed. Always works on behalf of the weak and wounded.", image:null},
+  {card_name:"Queen of Discs", arcana:"Minor", suit:"discs", number:"Q", card_keywords:"Abundance, material security, nurturing generosity", card_meaning:"One who gives abundantly of all life's sweetness. Generous and motherly, a resource for wealth.", image:null},
+  {card_name:"King of Discs", arcana:"Minor", suit:"discs", number:"K", card_keywords:"Pragmatism, personal power, overcoming barriers", card_meaning:"One who brings practical solutions and personal power to any situation. Pushes through barriers to success.", image:null},
+
+  {card_name:"Ace of Wands", arcana:"Minor", suit:"wands", number:"A", card_keywords:"Beginnings, emerging passion, creativity", card_meaning:"A new passion has captured you. This is a time of great creative potential. Seize the moment and take advantage of the fiery energy available to you now.", image:null},
+  {card_name:"2 of Wands", arcana:"Minor", suit:"wands", number:"2", card_keywords:"Loss of will, coercion, pressure from others", card_meaning:"Illusion or enchantment may be keeping you from fulfilling your potential for success. Do not be overly influenced by attractive people and their plans for you.", image:null},
+  {card_name:"3 of Wands", arcana:"Minor", suit:"wands", number:"3", card_keywords:"A pause in the endeavor, evaluating the situation", card_meaning:"Assess your losses and your gains now, and if necessary change your goals to align with new information. Be on the alert for those who could thwart you.", image:null},
+  {card_name:"4 of Wands", arcana:"Minor", suit:"wands", number:"4", card_keywords:"Effort toward completion, the goal in sight", card_meaning:"Move quickly through your present circumstances. Your work is moving toward success, but you are not there yet. The time of rest and celebration must be earned.", image:null},
+  {card_name:"5 of Wands", arcana:"Minor", suit:"wands", number:"5", card_keywords:"Harmless challenge, a test of courage, ingenuity", card_meaning:"Remain calm in the face of perceived obstacles. They do not threaten you in any serious way. Find ways to placate your possible foes.", image:null},
+  {card_name:"6 of Wands", arcana:"Minor", suit:"wands", number:"6", card_keywords:"Justifiable pride, recognition from others, success", card_meaning:"You are on top of the world now. Your achievements are secure, your spirits are high, and your allies are supportive and loyal. Victory is yours!", image:null},
+  {card_name:"7 of Wands", arcana:"Minor", suit:"wands", number:"7", card_keywords:"Apology, atonement, negotiating terms of agreement", card_meaning:"Some mistakes may need to be atoned for and situations set right. Take care that the punishment fits the crime. Don't hold a grudge.", image:null},
+  {card_name:"8 of Wands", arcana:"Minor", suit:"wands", number:"8", card_keywords:"Communication, flash of understanding, quick responses", card_meaning:"Messages of light and hope are coming to you from many sources. Pay attention or you may miss them. Be prepared to take swift action.", image:null},
+  {card_name:"9 of Wands", arcana:"Minor", suit:"wands", number:"9", card_keywords:"Gathering resources, biding your time, self-discipline", card_meaning:"All the power you need will be at your disposal when the time is right. You can relax for the moment and trust that you'll know when to act. Continue to build up your strength.", image:null},
+  {card_name:"10 of Wands", arcana:"Minor", suit:"wands", number:"10", card_keywords:"Difficulties, too many tasks, lack of help", card_meaning:"The energy in the situation is oppressive and overwhelming. You will only be more confused and exhausted if you persist. Step aside and let things settle down.", image:null},
+  {card_name:"Knave of Wands", arcana:"Minor", suit:"wands", number:"Kn", card_keywords:"Exploring magic, channeling energy, managing chaos", card_meaning:"One who is learning about magic and energy. Needs practice to control the will and make sense of chaos.", image:null},
+  {card_name:"Knight of Wands", arcana:"Minor", suit:"wands", number:"Kt", card_keywords:"Adventure, risk-taking, restlessness", card_meaning:"One who seeks adventure and excitement. Can indicate a desire to travel or explore risky environments.", image:null},
+  {card_name:"Queen of Wands", arcana:"Minor", suit:"wands", number:"Q", card_keywords:"Charisma, magnetic attraction, pride", card_meaning:"One who attracts others through beauty and charisma. Can be over-confident, frivolous, or arrogant.", image:null},
+  {card_name:"King of Wands", arcana:"Minor", suit:"wands", number:"K", card_keywords:"Forceful leadership, dominant drive, impulsiveness", card_meaning:"One who dominates any situation through the force of leadership. Needs to keep control of anger and impulsiveness.", image:null},
+
+  {card_name:"Ace of Swords", arcana:"Minor", suit:"swords", number:"A", card_keywords:"Fame, triumph, conquest through cleverness", card_meaning:"Happiness that is won at the cost of another's misery is not worth the price. Consider any new opportunities presented to you and weigh their potential for harm.", image:null},
+  {card_name:"2 of Swords", arcana:"Minor", suit:"swords", number:"2", card_keywords:"A balanced approach, cautious progress, vigilance", card_meaning:"Proceed slowly and with caution. The situation holds possible danger or failure, but if you are careful and pay attention to details, you can reach your goal.", image:null},
+  {card_name:"3 of Swords", arcana:"Minor", suit:"swords", number:"3", card_keywords:"Sorrow, emotional drama, misunderstandings", card_meaning:"Affairs of the heart do not go well, but the situation may be exaggerated and not as bad as it seems. Take time apart to regain perspective before continuing or communicating.", image:null},
+  {card_name:"4 of Swords", arcana:"Minor", suit:"swords", number:"4", card_keywords:"Recovery, meditation, a healing respite from troubles", card_meaning:"Quiet your swirling mind. It's time to rest and sort things through. Do not take any further action. Take care of your mental and physical health.", image:null},
+  {card_name:"5 of Swords", arcana:"Minor", suit:"swords", number:"5", card_keywords:"Defeat, injustice, malicious intentions", card_meaning:"The situation is not winnable. Someone is not playing fair or the odds are just too great against you. Retreat and live to fight another day.", image:null},
+  {card_name:"6 of Swords", arcana:"Minor", suit:"swords", number:"6", card_keywords:"Rest after anxiety, compassion for all parties involved", card_meaning:"When something has failed or been defeated, it takes time to recover. Seek out whatever help you need to heal from the situation. If you are the victor, do not gloat.", image:null},
+  {card_name:"7 of Swords", arcana:"Minor", suit:"swords", number:"7", card_keywords:"An unstable situation, possible betrayal, theft", card_meaning:"Do not cheat or take shortcuts to achieve your objectives, and be watchful for unethical behavior in others. Plots and secrets are possible. Be on the alert for deception.", image:null},
+  {card_name:"8 of Swords", arcana:"Minor", suit:"swords", number:"8", card_keywords:"Restriction, paranoia, giving away your power", card_meaning:"Uncertainty and suspicion rob you of your independence, making you feel trapped or helpless. Get your facts straight and don't be intimidated by mere shadows.", image:null},
+  {card_name:"9 of Swords", arcana:"Minor", suit:"swords", number:"9", card_keywords:"Paralyzing fears, panic, primitive instincts", card_meaning:"Your nightmares are creeping through into your waking world, and your fears are justified. Either stay quiet until the crisis passes or stand and face it bravely.", image:null},
+  {card_name:"10 of Swords", arcana:"Minor", suit:"swords", number:"10", card_keywords:"The end of a bad time, release of failure, moving on", card_meaning:"The situation is ruined, and it's time to cut your losses. Grieve for what might have been, but don't stay in that dark place too long. Gather your courage and begin again.", image:null},
+  {card_name:"Knave of Swords", arcana:"Minor", suit:"swords", number:"Kn", card_keywords:"Inquiring mind, curiosity, search for truth", card_meaning:"One who has an inquiring mind, always seeking to know more. Needs positive outlets for curiosity.", image:null},
+  {card_name:"Knight of Swords", arcana:"Minor", suit:"swords", number:"Kt", card_keywords:"Haste, reckless action, careless execution", card_meaning:"One who rushes in without adequate planning. May harm others through carelessness and reckless haste.", image:null},
+  {card_name:"Queen of Swords", arcana:"Minor", suit:"swords", number:"Q", card_keywords:"Quiet authority, hidden power, strategic intellect", card_meaning:"One who wields quiet power behind the scenes. May be more dangerous than is easily perceived.", image:null},
+  {card_name:"King of Swords", arcana:"Minor", suit:"swords", number:"K", card_keywords:"Strategic vision, brilliant intellect, calculated action", card_meaning:"One who plans and strategizes thoroughly before acting. Brings a brilliant mind to any situation.", image:null},
+];
+
+/* =========================================================
+   CARD ART — filenames live alongside this HTML file (assets folder)
+   ========================================================= */
+const CARD_BACK_IMAGE = "card-back.jpg";
+const CARD_IMAGE_FILENAME = {
+  "The Fool": "T00_TheFool_Cmyu 1.png",
+  "The Magician": "T01_TheMagician_Cmyu 1.png",
+  "The High Priestess": "T02_TheHighPriestess_Cmyu 1.png",
+  "The Empress": "T03_TheEmpress_Cmyu 1.png",
+  "The Emperor": "T04_TheEmperor_Cmyu 1.png",
+  "The Hierophant": "T05_TheHierophant_Cmyu 1.png",
+  "The Lovers": "T06_TheLovers_Cmyu 1.png",
+  "The Chariot": "T07_TheChariot_Cmyu 1.png",
+  "Strength": "T08_Strength_Cmyu 1.png",
+  "The Hermit": "T09_TheHermit_Cmyu 1.png",
+  "Wheel of Fortune": "T10_WheelOfFortune_Cmyu 1.png",
+  "Justice": "T11_Justice_Cmyu 1.png",
+  "The Hanged Man": "T12_TheHangedMan_Cmyu 1.png",
+  "Death": "T13_Death_Cmyu 1.png",
+  "Temperance": "T14_Temperance_Cmyu 1.png",
+  "The Devil": "T15_TheDevil_Cmyu 1.png",
+  "The Tower": "T16_TheTower_Cmyu 1.png",
+  "The Star": "T17_TheStar_Cmyu 1.png",
+  "The Moon": "T18_TheMoon_Cmyu 1.png",
+  "The Sun": "T19_TheSun_Cmyu 1.png",
+  "Judgment": "T20_Judgement_Cmyu 1.png",
+  "The World": "T21_TheWorld_Cmyu 1.png",
+  "Ace of Wands": "T22_AceOfWands_Cmyu 1.png",
+  "2 of Wands": "T23_TwoOfWands_Cmyu 1.png",
+  "3 of Wands": "T24_ThreeOfWands_Cmyu 1.png",
+  "4 of Wands": "T25_FourOfWands_Cmyu 1.png",
+  "5 of Wands": "T26_FiveOfWands_Cmyu 1.png",
+  "6 of Wands": "T27_SixOfWands_Cmyu 1.png",
+  "7 of Wands": "T28_SevenOfWands_Cmyu 1.png",
+  "8 of Wands": "T29_EightOfWands_Cmyu 1.png",
+  "9 of Wands": "T30_NineOfWands_Cmyu 1.png",
+  "10 of Wands": "T31_TenOfWands_Cmyu 1.png",
+  "Knave of Wands": "T32_PageOfWands_Cmyu 1.png",
+  "Knight of Wands": "T33_KnightOfWands_Cmyu 1.png",
+  "Queen of Wands": "T34_QueenOfWands_Cmyu 1.png",
+  "King of Wands": "T35_KingOfWands_Cmyu 1.png",
+  "Ace of Cups": "T36_AceOfCups_Cmyu 1.png",
+  "2 of Cups": "T37_TwoOfCups_Cmyu 1.png",
+  "3 of Cups": "T38_ThreeOfCups_Cmyu 1.png",
+  "4 of Cups": "T39_FourOfCups_Cmyu 1.png",
+  "5 of Cups": "T40_FiveOfCups_Cmyu 1.png",
+  "6 of Cups": "T41_SixOfCups_Cmyu 1.png",
+  "7 of Cups": "T42_SevenOfCups_Cmyu 1.png",
+  "8 of Cups": "T43_EightOfCups_Cmyu 1.png",
+  "9 of Cups": "T44_NineOfCups_Cmyu 1.png",
+  "10 of Cups": "T45_TenOfCups_Cmyu 1.png",
+  "Knave of Cups": "T46_PageOfCups_Cmyu 1.png",
+  "Knight of Cups": "T47_KnightOfCups_Cmyu 1.png",
+  "Queen of Cups": "T48_QueenOfCups_Cmyu 1.png",
+  "King of Cups": "T49_KingOfCups_Cmyu 1.png",
+  "Ace of Swords": "T50_AceOfSwords_Cmyu 1.png",
+  "2 of Swords": "T51_TwoOfSwords_Cmyu 1.png",
+  "3 of Swords": "T52_ThreeOfSwords_Cmyu 1.png",
+  "4 of Swords": "T53_FourOfSwords_Cmyu 1.png",
+  "5 of Swords": "T54_FiveOfSwords_Cmyu 1.png",
+  "6 of Swords": "T55_SixOfSwords_Cmyu 1.png",
+  "7 of Swords": "T56_SevenOfSwords_Cmyu 1.png",
+  "8 of Swords": "T57_EightOfSwords_Cmyu 1.png",
+  "9 of Swords": "T58_NineOfSwords_Cmyu 1.png",
+  "10 of Swords": "T59_TenOfSwords_Cmyu 1.png",
+  "Knave of Swords": "T60_PageOfSwords_Cmyu 1.png",
+  "Knight of Swords": "T61_KnightOfSwords_Cmyu 1.png",
+  "Queen of Swords": "T62_QueenOfSwords_Cmyu 1.png",
+  "King of Swords": "T63_KingOfSwords_Cmyu 1.png",
+  "Ace of Discs": "T64_AceOfPentacles_Cmyu 1.png",
+  "2 of Discs": "T65_TwoOfPentacles_Cmyu 1.png",
+  "3 of Discs": "T66_ThreeOfPentacles_Cmyu 1.png",
+  "4 of Discs": "T67_FourOfPentacles_Cmyu 1.png",
+  "5 of Discs": "T68_FiveOfPentacles_Cmyu 1.png",
+  "6 of Discs": "T69_SixOfPentacles_Cmyu 1.png",
+  "7 of Discs": "T70_SevenOfPentacles_Cmyu 1.png",
+  "8 of Discs": "T71_EightOfPentacles_Cmyu 1.png",
+  "9 of Discs": "T72_NineOfPentacles_Cmyu 1.png",
+  "10 of Discs": "T73_TenOfPentacles_Cmyu 1.png",
+  "Knave of Discs": "T74_PageOfPentacles_Cmyu 1.png",
+  "Knight of Discs": "T75_KnightOfPentacles_Cmyu 1.png",
+  "Queen of Discs": "T76_QueenOfPentacles_Cmyu 1.png",
+  "King of Discs": "T77_KingOfPentacles_Cmyu 1.png",
+};
+allCards.forEach(c => { c.image = CARD_IMAGE_FILENAME[c.card_name] || null; });
+
+/* =========================================================
+   STATE
+   ========================================================= */
+let currentDraw = [];
+let currentSpread = "single";
+let currentCardRef = null;   // the actual card object being viewed in full
+let viewSource = "draw";     // "draw" or "explore"
+
+const SPREAD_INFO = {
+  single: {
+    title: "Single Card Reading",
+    count: 1,
+    copy: `<p>A single card reading provides a quick insight into a specific question or situation. It's a straightforward method to gain clarity, offering a focused message or guidance.</p><p>Focus on your question in your mind and when you are ready, draw a card.</p>`
+  },
+  yesno: {
+    title: "Yes / No Reading",
+    count: 1,
+    copy: `<p>A Yes or No reading gives you a direct answer to a clear, specific question. Hold your question in mind and let the card speak plainly.</p><p>Ask your question, then draw.</p>`
+  },
+  bittersweet: {
+    title: "Bittersweet Reading",
+    count: 2,
+    copy: `<p>The Bittersweet reading draws two cards side by side, showing both the light and the difficulty within a situation — what's working, and what still stings.</p><p>When you're ready, draw your two cards.</p>`
+  },
+  timeline: {
+    title: "Timeline Reading",
+    count: 3,
+    copy: `<p>The Timeline reading draws three cards representing past, present, and future — a gentle arc showing where you've been, where you are, and where things are heading.</p><p>When you're ready, draw your three cards.</p>`
+  }
+};
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+let navStack = ['screen-home'];
+
+function showScreen(id, opts){
+  opts = opts || {};
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (!opts.isBack){
+    if (navStack[navStack.length - 1] !== id) navStack.push(id);
+  }
+  updatePersistentBack();
+}
+
+function updatePersistentBack(){
+  const btn = document.getElementById('persistent-back');
+  const current = navStack[navStack.length - 1];
+  const hide = (current === 'screen-home' || current === 'screen-splash');
+  btn.classList.toggle('show', !hide);
+}
+
+function goBack(){
+  if (navStack.length > 1){
+    navStack.pop();
+    const prev = navStack[navStack.length - 1];
+    showScreen(prev, { isBack: true });
+  }
+}
+
+document.getElementById('persistent-back').addEventListener('click', goBack);
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1600);
+}
+
+document.querySelectorAll('[data-nav]').forEach(el => {
+  el.addEventListener('click', () => {
+    const nav = el.getAttribute('data-nav');
+    if (nav === 'journal-toast'){ toast('Journal Entries — coming soon'); return; }
+    if (nav === 'today'){ startDraw('single', true); return; }
+    showScreen('screen-' + nav);
+  });
+});
+
+/* =========================================================
+   DRAW HELPERS
+   ========================================================= */
+function drawRandomCards(n){
+  const deck = allCards.slice();
+  const drawn = [];
+  for (let i = 0; i < n; i++){
+    const idx = Math.floor(Math.random() * deck.length);
+    drawn.push(deck[idx]);
+    deck.splice(idx, 1);
+  }
+  return drawn;
+}
+
+function suitIcon(card){ return SUIT_ICON[card.suit] || "✦"; }
+
+/* Display-only formatting: spell out numeric ranks (2 of Cups -> Two of Cups).
+   Ace / Knave / Knight / Queen / King / Major Arcana names are already spelled out. */
+const RANK_WORDS = { "2":"Two", "3":"Three", "4":"Four", "5":"Five", "6":"Six", "7":"Seven", "8":"Eight", "9":"Nine", "10":"Ten" };
+function formatCardName(name){
+  return name.replace(/^(10|[2-9])(?=\s+of\s+)/, (n) => RANK_WORDS[n]);
+}
+
+/* =========================================================
+   READINGS FLOW
+   ========================================================= */
+document.querySelectorAll('.spread-card').forEach(el => {
+  el.addEventListener('click', () => {
+    const key = el.getAttribute('data-spread');
+    openSpreadInfo(key);
+  });
+});
+
+function openSpreadInfo(key){
+  currentSpread = key;
+  const info = SPREAD_INFO[key];
+  document.getElementById('spread-info-title').textContent = info.title;
+  document.getElementById('spread-info-copy').innerHTML = info.copy;
+  document.getElementById('btn-start-draw').textContent = info.count > 1 ? "Draw Cards" : "Draw a Card";
+  showScreen('screen-spread-info');
+}
+
+document.getElementById('btn-start-draw').addEventListener('click', () => {
+  startDraw(currentSpread, false);
+});
+
+function startDraw(spreadKey, fromToday){
+  currentSpread = spreadKey;
+  const info = SPREAD_INFO[spreadKey];
+  currentDraw = drawRandomCards(info.count);
+  viewSource = "draw";
+  buildDrawScreen(fromToday ? "Today's Card" : info.title, info.count);
+  showScreen('screen-drawcard');
+}
+
+function drawSubText(count, allRevealed){
+  if (!allRevealed){
+    return count === 1 ? "Tap the card to reveal it" : "Tap each card to reveal it";
+  }
+  return count === 1 ? "Tap the card to see its meaning" : "Tap a card to see its meaning";
+}
+
+function buildDrawScreen(title, count){
+  document.getElementById('draw-title').textContent = title;
+  document.getElementById('draw-sub').textContent = drawSubText(count, false);
+
+  const row = document.getElementById('draw-row');
+  row.innerHTML = '';
+
+  const labels = count === 3 ? ["Past","Present","Future"] : (count === 2 ? ["Bitter","Sweet"] : []);
+  const smallSizeClass = count === 3 ? ' small count-3' : (count > 1 ? ' small' : '');
+
+  currentDraw.forEach((card, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'draw-slot';
+
+    if (labels[i]) {
+      const lab = document.createElement('div');
+      lab.className = 'draw-slot-label';
+      lab.textContent = labels[i];
+      slot.appendChild(lab);
+    }
+
+    const flip = document.createElement('div');
+    flip.className = 'flip-card' + smallSizeClass;
+    flip.dataset.index = i;
+    flip.innerHTML = `
+      <div class="flip-inner">
+        <div class="flip-face flip-back">
+          <img src="${CARD_BACK_IMAGE}" alt="Card back">
+        </div>
+        <div class="flip-face flip-front">
+          <div class="card-face">
+            <div class="card-image-area">
+              <img src="${card.image || CARD_BACK_IMAGE}" alt="${formatCardName(card.card_name)}">
+            </div>
+            <div class="card-name-label">${formatCardName(card.card_name)}</div>
+          </div>
+        </div>
+      </div>`;
+    flip.addEventListener('click', () => {
+      if (!flip.classList.contains('revealed')) return; // revealed directly via the row click handler below
+      openCardDetail(card, "draw");
+    });
+    slot.appendChild(flip);
+    row.appendChild(slot);
+  });
+}
+
+/* =========================================================
+   CARD DETAIL (full view + meaning flip)
+   ========================================================= */
+function openCardDetail(card, source){
+  currentCardRef = card;
+  viewSource = source;
+
+  const detailImg = document.getElementById('detail-card-image');
+  detailImg.src = card.image || CARD_BACK_IMAGE;
+  detailImg.alt = formatCardName(card.card_name);
+  document.getElementById('detail-front-name').textContent = formatCardName(card.card_name);
+  document.getElementById('detail-name').textContent = formatCardName(card.card_name);
+  document.getElementById('detail-keywords').textContent = card.card_keywords;
+  document.getElementById('detail-meaning').textContent = card.card_meaning;
+
+  const flip = document.getElementById('detail-flip');
+  flip.classList.remove('flipped');
+  document.getElementById('detail-hint').textContent = "Tap to see card meaning";
+  document.getElementById('detail-hint').style.display = 'block';
+
+  document.getElementById('detail-bottom-nav').classList.toggle('explore-mode', source === 'explore');
+
+  showScreen('screen-card');
+}
+
+/* Explore carousel: prev/next navigation between filtered cards */
+function navigateExploreCard(direction){
+  if (viewSource !== 'explore' || !currentCardRef) return;
+  const list = getExploreList();
+  const idx = list.findIndex(c => c.card_name === currentCardRef.card_name);
+  if (idx === -1 || list.length < 2) return;
+  const nextIdx = (idx + direction + list.length) % list.length;
+  openCardDetail(list[nextIdx], "explore");
+}
+
+document.getElementById('detail-prev').addEventListener('click', () => navigateExploreCard(-1));
+document.getElementById('detail-next').addEventListener('click', () => navigateExploreCard(1));
+
+/* Swipe left/right on the card itself to move to the next/previous card (explore only) */
+let swipeStartX = null, swipeStartY = null, swipeHandled = false;
+const detailFlipEl = document.getElementById('detail-flip');
+detailFlipEl.addEventListener('touchstart', (e) => {
+  if (viewSource !== 'explore') return;
+  const t = e.touches[0];
+  swipeStartX = t.clientX;
+  swipeStartY = t.clientY;
+  swipeHandled = false;
+}, { passive: true });
+detailFlipEl.addEventListener('touchmove', (e) => {
+  if (viewSource !== 'explore' || swipeStartX === null || swipeHandled) return;
+  const t = e.touches[0];
+  const dx = t.clientX - swipeStartX;
+  const dy = t.clientY - swipeStartY;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5){
+    swipeHandled = true;
+    navigateExploreCard(dx < 0 ? 1 : -1);
+  }
+}, { passive: true });
+detailFlipEl.addEventListener('touchend', () => {
+  swipeStartX = null; swipeStartY = null;
+});
+
+document.getElementById('detail-flip').addEventListener('click', function(){
+  if (swipeHandled){ swipeHandled = false; return; }
+  this.classList.toggle('flipped');
+  const hint = document.getElementById('detail-hint');
+  hint.textContent = this.classList.contains('flipped') ? "Tap to go back to card" : "Tap to see card meaning";
+});
+
+/* Tap an un-revealed draw card to flip it; tap a revealed card to open its meaning */
+document.getElementById('draw-row').addEventListener('click', (e) => {
+  const flip = e.target.closest('.flip-card');
+  if (!flip) return;
+  if (!flip.classList.contains('revealed')){
+    flip.classList.add('revealed');
+    const all = document.querySelectorAll('#draw-row .flip-card');
+    const allRevealed = [...all].every(c => c.classList.contains('revealed'));
+    document.getElementById('draw-sub').textContent = drawSubText(all.length, allRevealed);
+  } else {
+    const idx = parseInt(flip.dataset.index, 10);
+    openCardDetail(currentDraw[idx], "draw");
+  }
+});
+
+/* =========================================================
+   EXPLORE
+   ========================================================= */
+const ARCANA_TABS = ["Major Arcana", "Minor Arcana"];
+const SUIT_FILTERS = ["All", "Cups", "Discs", "Wands", "Swords"];
+let currentArcanaTab = "Major Arcana";
+let currentSuitFilter = "All";
+
+function buildArcanaTabs(){
+  const row = document.getElementById('arcana-tabs');
+  row.innerHTML = '';
+  ARCANA_TABS.forEach(t => {
+    const tab = document.createElement('div');
+    tab.className = 'arcana-tab' + (t === currentArcanaTab ? ' active' : '');
+    tab.textContent = t;
+    tab.addEventListener('click', () => {
+      currentArcanaTab = t;
+      currentSuitFilter = "All";
+      buildArcanaTabs();
+      buildFilterRow();
+      buildExploreGrid();
+    });
+    row.appendChild(tab);
+  });
+}
+
+function buildFilterRow(){
+  const row = document.getElementById('filter-row');
+  row.innerHTML = '';
+  if (currentArcanaTab === "Major Arcana"){
+    row.style.display = 'none';
+    return;
+  }
+  row.style.display = 'flex';
+  SUIT_FILTERS.forEach(f => {
+    const chip = document.createElement('div');
+    chip.className = 'filter-chip' + (f === currentSuitFilter ? ' active' : '');
+    chip.textContent = f;
+    chip.addEventListener('click', () => {
+      currentSuitFilter = f;
+      buildFilterRow();
+      buildExploreGrid();
+    });
+    row.appendChild(chip);
+  });
+}
+
+function getExploreList(){
+  return allCards.filter(c => {
+    if (currentArcanaTab === "Major Arcana") return c.suit === "major";
+    if (currentSuitFilter === "All") return c.suit !== "major";
+    return c.suit === currentSuitFilter.toLowerCase();
+  });
+}
+
+function buildExploreGrid(){
+  const grid = document.getElementById('explore-grid');
+  grid.innerHTML = '';
+  const list = getExploreList();
+  list.forEach(card => {
+    const thumb = document.createElement('div');
+    thumb.className = 'explore-thumb';
+    thumb.innerHTML = `
+      <div class="thumb-image-area"><img src="${card.image || CARD_BACK_IMAGE}" alt="${formatCardName(card.card_name)}"></div>
+      <div class="thumb-name">${formatCardName(card.card_name)}</div>
+    `;
+    thumb.addEventListener('click', () => openCardDetail(card, "explore"));
+    grid.appendChild(thumb);
+  });
+}
+
+/* init explore on first load */
+buildArcanaTabs();
+buildFilterRow();
+buildExploreGrid();
+
+/* =========================================================
+   SPLASH -> HOME
+   ========================================================= */
+setTimeout(() => { showScreen('screen-home'); }, 1100);
+document.getElementById('screen-splash').addEventListener('click', () => showScreen('screen-home'));
+
+</script>
+</body>
+</html>
