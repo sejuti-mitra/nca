@@ -4,10 +4,17 @@
   "display": "standalone",
   "name": "sejuti-mitra",
   "orientation": "any",
-  "scope": "/",
+  "scope": "/nca/",
   "short_name": "sejuti-mitra",
-  "start_url": "/https://sejuti-mitra.github.io/nca/",
+  "start_url": "/nca/",
   "theme_color": "#b25f43",
   "id": "nca",
-  "description": "Tarot App"
+  "description": "Tarot App",
+  "icons": [
+    {
+      "src": "app-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
